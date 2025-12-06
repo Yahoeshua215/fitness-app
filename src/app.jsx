@@ -689,7 +689,12 @@ export default function App() {
 
           console.log('Inserting exercise:', exerciseToInsert.name);
           console.log('Exercise data being sent:', JSON.stringify(exerciseToInsert, null, 2));
-          const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
+          // Use local storage instead of database for now
+          const savedExercise = {
+            id: `ex_${Date.now()}_${Math.random()}`,
+            ...exerciseToInsert,
+            ...sanitizedExercise // Include all the rich data
+          };
           savedExercises.push(savedExercise);
         } catch (err) {
           console.error('Failed to insert exercise:', exercise.name, err);
