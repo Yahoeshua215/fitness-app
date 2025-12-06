@@ -88,15 +88,21 @@ const ImportModal = ({ onImport, onClose, saving }) => {
 
   const handleFile = async (file) => {
     if (!file) return;
+    console.log('File selected:', file.name);
     setParsing(true);
     setError(null);
     setWorkoutName(file.name.replace(/\.(csv|xlsx?)$/i, ''));
-    
+
     try {
       const { rows, hyperlinks } = await parseSpreadsheet(file);
+      console.log('Parsed rows:', rows.length);
       const dataRows = rows.slice(1).filter(row => row[1]);
-      setPreview(dataRows.map((row, i) => mapRowToExercise(row, i, hyperlinks, i + 1)));
+      console.log('Data rows after filtering:', dataRows.length);
+      const exercises = dataRows.map((row, i) => mapRowToExercise(row, i, hyperlinks, i + 1));
+      console.log('Mapped exercises:', exercises);
+      setPreview(exercises);
     } catch (err) {
+      console.error('File parsing error:', err);
       setError('Failed to parse file.');
     } finally {
       setParsing(false);
@@ -161,7 +167,7 @@ const ImportModal = ({ onImport, onClose, saving }) => {
 
         {preview && (
           <div className="p-4 border-t border-zinc-700">
-            <button onClick={() => onImport(workoutName, preview)} disabled={saving || !workoutName.trim()} className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-600 text-white font-bold rounded-xl flex items-center justify-center gap-2">
+            <button onClick={() => { console.log('Import button clicked:', workoutName, preview?.length); onImport(workoutName, preview); }} disabled={saving || !workoutName.trim()} className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-600 text-white font-bold rounded-xl flex items-center justify-center gap-2">
               {saving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : 'Import & Save'}
             </button>
           </div>
@@ -614,6 +620,7 @@ export default function App() {
   };
 
   const handleImport = async (name, exerciseList) => {
+    console.log('handleImport called with:', { name, exerciseCount: exerciseList?.length });
     setSaving(true);
     try {
       console.log('Creating workout:', name);
