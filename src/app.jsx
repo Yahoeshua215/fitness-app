@@ -628,10 +628,12 @@ export default function App() {
         try {
           const exerciseToInsert = { ...exercise, workout_id: workout.id };
           console.log('Inserting exercise:', exerciseToInsert.name);
+          console.log('Exercise data being sent:', exerciseToInsert);
           const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
           savedExercises.push(savedExercise);
         } catch (err) {
           console.error('Failed to insert exercise:', exercise.name, err);
+          console.error('Exercise data that failed:', { ...exercise, workout_id: workout.id });
         }
       }
 
