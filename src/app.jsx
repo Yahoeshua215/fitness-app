@@ -62,8 +62,6 @@ const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
   const videoUrl = row[7]?.toString().trim() || hyperlinks[`H${rowIndex + 2}`] || hyperlinks[`B${rowIndex + 2}`] || '';
   const fullExercise = row[1] || '';
   const nameParts = fullExercise.split(' - ');
-  const instructorNotes = row[6]?.toString().trim() || '';
-
   return {
     exercise_order: index + 1,
     name: nameParts[0]?.trim() || `Exercise ${index + 1}`,
@@ -72,7 +70,6 @@ const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
     speed: row[3]?.toString() || '',
     rest: row[4]?.toString() || '',
     sets: parseInt(row[5]) || 1,
-    instructor_notes: instructorNotes,
     video_url: videoUrl
   };
 };
