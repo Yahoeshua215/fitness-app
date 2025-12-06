@@ -1,0 +1,494 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff } from 'lucide-react';
+import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
+
+// Supabase Configuration
+const SUPABASE_URL = 'https://meidwndgizrztgzinncc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1laWR3bmRnaXpyenRnemlubmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUwMzQ3MDcsImV4cCI6MjA4MDYxMDcwN30.dGLJvQo5Fk9tH30cLpGxEfUwt99UtOgyHCwVazpyaPA';
+
+// Supabase API helper
+const supabaseApi = async (table, method = 'GET', body = null, query = '') => {
+  const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
+  const headers = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json',
+  };
+  if (method === 'POST') headers['Prefer'] = 'return=representation';
+  
+  const options = { method, headers };
+  if (body) options.body = JSON.stringify(body);
+  
+  const res = await fetch(url, options);
+  if (!res.ok) throw new Error(`API Error: ${res.status}`);
+  return method === 'DELETE' ? null : res.json();
+};
+
+// Spreadsheet Parser
+const parseSpreadsheet = async (file) => {
+  const fileName = file.name.toLowerCase();
+  
+  if (fileName.endsWith('.csv')) {
+    return new Promise((resolve, reject) => {
+      Papa.parse(file, {
+        complete: (results) => resolve({ rows: results.data, hyperlinks: {} }),
+        error: reject,
+        skipEmptyLines: true
+      });
+    });
+  }
+  
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+        const hyperlinks = {};
+        Object.keys(sheet).forEach(cell => {
+          if (sheet[cell]?.l?.Target) hyperlinks[cell] = sheet[cell].l.Target;
+        });
+        resolve({ rows, hyperlinks });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
+  const videoUrl = row[7]?.toString().trim() || hyperlinks[`H${rowIndex + 2}`] || hyperlinks[`B${rowIndex + 2}`] || '';
+  const fullExercise = row[1] || '';
+  const nameParts = fullExercise.split(' - ');
+  
+  return {
+    exercise_order: index + 1,
+    name: nameParts[0]?.trim() || `Exercise ${index + 1}`,
+    description: nameParts.slice(1).join(' - ').trim() || '',
+    reps: row[2]?.toString() || '',
+    speed: row[3]?.toString() || '',
+    rest: row[4]?.toString() || '',
+    sets: parseInt(row[5]) || 1,
+    video_url: videoUrl
+  };
+};
+
+// Import Modal Component
+const ImportModal = ({ onImport, onClose, saving }) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [error, setError] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [workoutName, setWorkoutName] = useState('My Workout');
+  const fileInputRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (!file) return;
+    setParsing(true);
+    setError(null);
+    setWorkoutName(file.name.replace(/\.(csv|xlsx?)$/i, ''));
+    
+    try {
+      const { rows, hyperlinks } = await parseSpreadsheet(file);
+      const dataRows = rows.slice(1).filter(row => row[1]);
+      setPreview(dataRows.map((row, i) => mapRowToExercise(row, i, hyperlinks, i + 1)));
+    } catch (err) {
+      setError('Failed to parse file.');
+    } finally {
+      setParsing(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-900 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-zinc-700 flex items-center justify-between">
+          <h2 className="text-white font-bold text-lg flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-orange-400" />
+            Import Workout
+          </h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white"><X className="w-6 h-6" /></button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {!preview ? (
+            <>
+              <div
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFile(e.dataTransfer.files[0]); }}
+                onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${dragActive ? 'border-orange-500 bg-orange-500/10' : 'border-zinc-600 hover:border-zinc-500'}`}
+              >
+                <Upload className={`w-12 h-12 mx-auto mb-4 ${dragActive ? 'text-orange-400' : 'text-zinc-500'}`} />
+                <p className="text-white font-medium mb-2">{parsing ? 'Parsing...' : 'Drop your spreadsheet here'}</p>
+                <p className="text-zinc-400 text-sm">Supports .xlsx and .csv</p>
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={(e) => handleFile(e.target.files[0])} className="hidden" />
+              </div>
+              {error && <div className="mt-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm">{error}</div>}
+              <div className="mt-4 text-zinc-500 text-xs">
+                <p className="font-medium text-zinc-400 mb-1">Expected columns:</p>
+                <p># | Exercise | Reps | Speed | Rest | Sets | Notes | Video</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-4">
+                <label className="text-zinc-400 text-sm mb-1 block">Workout Name</label>
+                <input type="text" value={workoutName} onChange={(e) => setWorkoutName(e.target.value)} className="w-full bg-zinc-800 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none" />
+              </div>
+              <p className="text-zinc-400 text-sm mb-2">{preview.length} exercises</p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {preview.map((ex, i) => (
+                  <div key={i} className="bg-zinc-800 rounded-lg p-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold text-sm">{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{ex.name}</p>
+                      {ex.video_url && <p className="text-green-400 text-xs">✓ Video</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setPreview(null)} className="mt-4 text-zinc-400 text-sm hover:text-white">← Back</button>
+            </>
+          )}
+        </div>
+
+        {preview && (
+          <div className="p-4 border-t border-zinc-700">
+            <button onClick={() => onImport(workoutName, preview)} disabled={saving || !workoutName.trim()} className="w-full py-3 bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-600 text-white font-bold rounded-xl flex items-center justify-center gap-2">
+              {saving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : 'Import & Save'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Exercise Card Component
+const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [noteText, setNoteText] = useState(progress?.notes || '');
+  const [showVideo, setShowVideo] = useState(false);
+
+  const completedSets = progress?.completed_sets || [];
+
+  useEffect(() => { setNoteText(progress?.notes || ''); }, [progress?.notes]);
+
+  const getVideoEmbed = (url) => {
+    if (!url) return null;
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+    if (ytMatch) return { type: 'youtube', id: ytMatch[1], embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` };
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)(?:\/([a-zA-Z0-9]+))?/);
+    if (vimeoMatch) {
+      const [, id, hash] = vimeoMatch;
+      return { type: 'vimeo', id, embedUrl: hash ? `https://player.vimeo.com/video/${id}?h=${hash}` : `https://player.vimeo.com/video/${id}` };
+    }
+    return null;
+  };
+
+  const videoEmbed = getVideoEmbed(exercise.video_url);
+
+  return (
+    <div className="w-full h-full flex flex-col bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
+      <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-4 py-3 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">{exercise.exercise_order}</div>
+        <h2 className="text-white font-bold text-xl flex-1 truncate">{exercise.name}</h2>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Video */}
+        <div className="relative aspect-video bg-zinc-800 rounded-xl overflow-hidden border border-zinc-600">
+          {showVideo && videoEmbed ? (
+            <div className="absolute inset-0">
+              <iframe src={videoEmbed.embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+              <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Open ↗</a>
+            </div>
+          ) : videoEmbed ? (
+            <div className="absolute inset-0">
+              {videoEmbed.type === 'youtube' && <img src={`https://img.youtube.com/vi/${videoEmbed.id}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                <button onClick={() => setShowVideo(true)} className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center"><Play className="w-8 h-8 text-white ml-1" fill="white" /></button>
+                <div className="flex gap-2 text-sm">
+                  <span className="text-zinc-400">Tap to play</span>
+                  <span className="text-zinc-600">|</span>
+                  <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">Open ↗</a>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <Link className="w-8 h-8 text-zinc-600 mb-2" />
+              <span className="text-zinc-500 text-sm">No video</span>
+            </div>
+          )}
+        </div>
+
+        {/* Bento Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-orange-400 mb-2"><Repeat className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Reps</span></div>
+            <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
+          </div>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-blue-400 mb-2"><Zap className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Speed</span></div>
+            <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
+          </div>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-green-400 mb-2"><Clock className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Rest</span></div>
+            <p className="text-white font-medium text-sm">{exercise.rest || '—'}</p>
+          </div>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-purple-400 mb-2"><Dumbbell className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Sets</span></div>
+            <div className="flex gap-2 flex-wrap">
+              {Array.from({ length: exercise.sets }, (_, i) => (
+                <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
+                  {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Description */}
+        {exercise.description && (
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <p className="text-yellow-400 text-xs font-semibold uppercase mb-2">Instructions</p>
+            <p className="text-zinc-300 text-sm">{exercise.description}</p>
+          </div>
+        )}
+
+        {/* Notes */}
+        <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-pink-400"><Edit3 className="w-4 h-4" /><span className="text-xs font-semibold uppercase">My Notes</span></div>
+            {!isEditingNotes ? (
+              <button onClick={() => setIsEditingNotes(true)} className="text-xs text-zinc-400 hover:text-white">Edit</button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => { onUpdateNotes(exercise.id, noteText); setIsEditingNotes(false); }} className="p-1 text-green-400"><Save className="w-4 h-4" /></button>
+                <button onClick={() => { setNoteText(progress?.notes || ''); setIsEditingNotes(false); }} className="p-1 text-red-400"><X className="w-4 h-4" /></button>
+              </div>
+            )}
+          </div>
+          {isEditingNotes ? (
+            <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add notes..." className="w-full bg-zinc-900 text-white rounded-lg p-3 text-sm border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none" rows={3} />
+          ) : (
+            <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main App
+export default function App() {
+  const [workouts, setWorkouts] = useState([]);
+  const [currentWorkout, setCurrentWorkout] = useState(null);
+  const [exercises, setExercises] = useState([]);
+  const [progress, setProgress] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showImport, setShowImport] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [synced, setSynced] = useState(true);
+  const [error, setError] = useState(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  useEffect(() => { loadWorkouts(); }, []);
+
+  const loadWorkouts = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await supabaseApi('workouts', 'GET', null, '?select=*&order=created_at.desc');
+      setWorkouts(data || []);
+      if (data?.length > 0) await loadWorkout(data[0]);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  };
+
+  const loadWorkout = async (workout) => {
+    try {
+      const exerciseData = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workout.id}&order=exercise_order`);
+      setExercises(exerciseData || []);
+      setCurrentWorkout(workout);
+
+      const today = new Date().toISOString().split('T')[0];
+      const progressData = await supabaseApi('exercise_progress', 'GET', null, `?session_date=eq.${today}`);
+      const progressMap = {};
+      (progressData || []).forEach(p => { progressMap[p.exercise_id] = p; });
+      setProgress(progressMap);
+      setCurrentIndex(0);
+    } catch (err) {
+      console.error('Load workout error:', err);
+    }
+  };
+
+  const handleImport = async (name, exerciseList) => {
+    setSaving(true);
+    try {
+      const [workout] = await supabaseApi('workouts', 'POST', { name });
+      const exercisesToInsert = exerciseList.map(ex => ({ ...ex, workout_id: workout.id }));
+      const savedExercises = await supabaseApi('exercises', 'POST', exercisesToInsert);
+      
+      setWorkouts(prev => [workout, ...prev]);
+      setCurrentWorkout(workout);
+      setExercises(savedExercises);
+      setProgress({});
+      setCurrentIndex(0);
+      setShowImport(false);
+    } catch (err) {
+      console.error('Import error:', err);
+      alert('Failed to import: ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  const toggleSet = async (exerciseId, setIndex) => {
+    const today = new Date().toISOString().split('T')[0];
+    const current = progress[exerciseId] || { exercise_id: exerciseId, completed_sets: [], notes: '', session_date: today };
+    const completedSets = current.completed_sets.includes(setIndex)
+      ? current.completed_sets.filter(s => s !== setIndex)
+      : [...current.completed_sets, setIndex];
+
+    const updated = { ...current, completed_sets: completedSets };
+    setProgress(prev => ({ ...prev, [exerciseId]: updated }));
+    setSynced(false);
+
+    try {
+      await supabaseApi('exercise_progress', 'POST', updated, '?on_conflict=exercise_id,session_date');
+      setSynced(true);
+    } catch (err) {
+      console.error('Sync error:', err);
+    }
+  };
+
+  const updateNotes = async (exerciseId, notes) => {
+    const today = new Date().toISOString().split('T')[0];
+    const current = progress[exerciseId] || { exercise_id: exerciseId, completed_sets: [], notes: '', session_date: today };
+    const updated = { ...current, notes };
+    setProgress(prev => ({ ...prev, [exerciseId]: updated }));
+    setSynced(false);
+
+    try {
+      await supabaseApi('exercise_progress', 'POST', updated, '?on_conflict=exercise_id,session_date');
+      setSynced(true);
+    } catch (err) {
+      console.error('Sync error:', err);
+    }
+  };
+
+  const resetProgress = async () => {
+    const today = new Date().toISOString().split('T')[0];
+    for (const ex of exercises) {
+      try {
+        await supabaseApi('exercise_progress', 'POST', { exercise_id: ex.id, completed_sets: [], notes: '', session_date: today }, '?on_conflict=exercise_id,session_date');
+      } catch (err) { console.error(err); }
+    }
+    setProgress({});
+  };
+
+  // Touch handlers
+  const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
+  const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    if (distance > 50 && currentIndex < exercises.length - 1) setCurrentIndex(currentIndex + 1);
+    if (distance < -50 && currentIndex > 0) setCurrentIndex(currentIndex - 1);
+  };
+
+  const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
+  const completedSets = exercises.reduce((sum, ex) => sum + (progress[ex.id]?.completed_sets?.length || 0), 0);
+  const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button onClick={loadWorkouts} className="px-4 py-2 bg-orange-500 text-white rounded-lg">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (exercises.length === 0) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Dumbbell className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+          <h1 className="text-white text-xl font-bold mb-2">No Workouts Yet</h1>
+          <p className="text-zinc-400 mb-6">Import your first workout</p>
+          <button onClick={() => setShowImport(true)} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto">
+            <Upload className="w-5 h-5" /> Import Workout
+          </button>
+        </div>
+        {showImport && <ImportModal onImport={handleImport} onClose={() => setShowImport(false)} saving={saving} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen w-full bg-zinc-950 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="p-4 pb-2">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-white font-bold text-lg truncate">{currentWorkout?.name || 'Workout'}</h1>
+            {synced ? <Cloud className="w-4 h-4 text-green-500" /> : <CloudOff className="w-4 h-4 text-yellow-500" />}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-zinc-400 text-sm">{completedSets}/{totalSets}</span>
+            <button onClick={resetProgress} className="p-2 text-zinc-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={() => setShowImport(true)} className="p-2 text-zinc-400 hover:text-orange-400"><Upload className="w-5 h-5" /></button>
+          </div>
+        </div>
+        <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all duration-300" style={{ width: `${progressPct}%` }} />
+        </div>
+      </div>
+
+      {/* Carousel */}
+      <div className="flex-1 px-4 pb-4 overflow-hidden" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        <div className="h-full transition-transform duration-300 ease-out flex" style={{ width: `${exercises.length * 100}%`, transform: `translateX(-${currentIndex * (100 / exercises.length)}%)` }}>
+          {exercises.map((exercise) => (
+            <div key={exercise.id} className="h-full px-1" style={{ width: `${100 / exercises.length}%` }}>
+              <ExerciseCard exercise={exercise} progress={progress[exercise.id]} onUpdateNotes={updateNotes} onToggleSet={toggleSet} />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="p-4 pt-2 flex items-center justify-between">
+        <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700"><ChevronLeft className="w-6 h-6" /></button>
+        <div className="flex gap-2">
+          {exercises.map((_, i) => (
+            <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === currentIndex ? 'bg-orange-500 w-6' : 'bg-zinc-600 hover:bg-zinc-500'}`} />
+          ))}
+        </div>
+        <button onClick={() => setCurrentIndex(Math.min(exercises.length - 1, currentIndex + 1))} disabled={currentIndex === exercises.length - 1} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700"><ChevronRight className="w-6 h-6" /></button>
+      </div>
+
+      {showImport && <ImportModal onImport={handleImport} onClose={() => setShowImport(false)} saving={saving} />}
+    </div>
+  );
+}
