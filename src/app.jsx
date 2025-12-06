@@ -658,14 +658,28 @@ export default function App() {
       for (const exercise of exerciseList) {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
-          const exerciseToInsert = { ...sanitizedExercise, workout_id: workout.id };
+
+          // Create minimal exercise object with only essential fields
+          const exerciseToInsert = {
+            workout_id: workout.id,
+            exercise_order: sanitizedExercise.exercise_order || 1,
+            name: sanitizedExercise.name || 'Unnamed Exercise',
+            description: sanitizedExercise.description || '',
+            reps: sanitizedExercise.reps || '',
+            speed: sanitizedExercise.speed || '',
+            rest: sanitizedExercise.rest || '',
+            sets: sanitizedExercise.sets || 1,
+            instructor_notes: sanitizedExercise.instructor_notes || '',
+            video_url: sanitizedExercise.video_url || ''
+          };
+
           console.log('Inserting exercise:', exerciseToInsert.name);
-          console.log('Exercise data being sent (sanitized):', exerciseToInsert);
+          console.log('Exercise data being sent:', JSON.stringify(exerciseToInsert, null, 2));
           const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
           savedExercises.push(savedExercise);
         } catch (err) {
           console.error('Failed to insert exercise:', exercise.name, err);
-          console.error('Exercise data that failed:', { ...sanitizeExercise(exercise), workout_id: workout.id });
+          console.error('Exercise data that failed:', JSON.stringify({ ...sanitizeExercise(exercise), workout_id: workout.id }, null, 2));
         }
       }
 
