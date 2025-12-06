@@ -436,7 +436,25 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
 // Workout Editor Component
 const WorkoutEditor = ({ workout, onSave, onCancel, saving }) => {
   const [workoutName, setWorkoutName] = useState(workout?.name || 'New Workout');
-  const [exercises, setExercises] = useState(workout?.exercises || []);
+  const [exercises, setExercises] = useState(() => {
+    // If editing existing workout, use its exercises
+    if (workout?.exercises && workout.exercises.length > 0) {
+      return workout.exercises;
+    }
+    // For new workouts, start with one blank exercise
+    return [{
+      id: Date.now(),
+      exercise_order: 1,
+      name: '',
+      description: '',
+      reps: '',
+      speed: '',
+      rest: '',
+      sets: 1,
+      instructor_notes: '',
+      video_url: ''
+    }];
+  });
 
   const addExercise = () => {
     const newExercise = {
