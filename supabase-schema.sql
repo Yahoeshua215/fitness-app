@@ -5,6 +5,7 @@
 CREATE TABLE IF NOT EXISTS workouts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
+  display_order INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS exercises (
   speed TEXT,
   rest TEXT,
   sets INTEGER DEFAULT 1,
+  instructor_notes TEXT,
   video_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

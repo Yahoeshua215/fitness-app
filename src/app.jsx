@@ -653,7 +653,9 @@ const WorkoutEditor = ({ workout, onSave, onCancel, saving }) => {
 };
 
 // Dashboard Component
-const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCreateNew, onEditWorkout, loading, error, showImport, setShowImport, saving }) => {
+const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCreateNew, onEditWorkout, onReorderWorkouts, loading, error, showImport, setShowImport, saving }) => {
+  const [draggedItem, setDraggedItem] = useState(null);
+  const [draggedOver, setDraggedOver] = useState(null);
   if (loading) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
@@ -672,6 +674,51 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
       </div>
     );
   }
+
+  const handleDragStart = (e, workout, index) => {
+    setDraggedItem({ workout, index });
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target);
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedItem && draggedItem.index !== index) {
+      setDraggedOver(index);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear if we're leaving the drag target, not entering a child
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDraggedOver(null);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    setDraggedOver(null);
+
+    if (!draggedItem || draggedItem.index === dropIndex) {
+      setDraggedItem(null);
+      return;
+    }
+
+    // Create new array with reordered items
+    const newWorkouts = [...workouts];
+    const [movedItem] = newWorkouts.splice(draggedItem.index, 1);
+    newWorkouts.splice(dropIndex, 0, movedItem);
+
+    // Update the order and call the reorder function
+    onReorderWorkouts(newWorkouts);
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDraggedOver(null);
+  };
 
   return (
     <div className="h-screen w-full bg-zinc-950 flex flex-col">
@@ -738,11 +785,34 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
-            {workouts.map((workout) => (
+            {workouts.map((workout, index) => (
               <div
                 key={workout.id}
-                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 hover:border-orange-500 transition-all duration-200 transform hover:scale-105 relative group"
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, workout, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
+                onDragEnd={handleDragEnd}
+                className={`
+                  bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border transition-all duration-200 relative group cursor-move
+                  ${draggedItem?.index === index
+                    ? 'border-orange-500 opacity-50 scale-105 shadow-2xl'
+                    : draggedOver === index
+                      ? 'border-green-400 bg-green-500/10'
+                      : 'border-zinc-700 hover:border-orange-500 transform hover:scale-105'
+                  }
+                `}
               >
+                {/* Drag Handle */}
+                <div className="absolute top-2 right-2 text-zinc-500 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <div className="flex flex-col gap-1">
+                    <div className="w-1 h-1 bg-current rounded-full"></div>
+                    <div className="w-1 h-1 bg-current rounded-full"></div>
+                    <div className="w-1 h-1 bg-current rounded-full"></div>
+                  </div>
+                </div>
+
                 <div onClick={() => onSelectWorkout(workout)}>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
@@ -840,7 +910,7 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const data = await supabaseApi('workouts', 'GET', null, '?select=*&order=created_at.desc');
+      const data = await supabaseApi('workouts', 'GET', null, '?select=*&order=display_order.asc,created_at.desc');
 
       // Get exercise counts for each workout
       const workoutsWithCounts = await Promise.all(
@@ -926,7 +996,10 @@ export default function App() {
     setSaving(true);
     try {
       console.log('Creating workout:', sanitizeText(name));
-      const [workout] = await supabaseApi('workouts', 'POST', { name: sanitizeText(name) });
+      const [workout] = await supabaseApi('workouts', 'POST', {
+        name: sanitizeText(name),
+        display_order: workouts.length // Add to end of list
+      });
       console.log('Workout created:', workout.id);
 
       const savedExercises = [];
@@ -1106,7 +1179,10 @@ export default function App() {
 
       // If this is a new workout (no ID), create it first
       if (!workout.id) {
-        const [newWorkout] = await supabaseApi('workouts', 'POST', { name: workout.name });
+        const [newWorkout] = await supabaseApi('workouts', 'POST', {
+          name: workout.name,
+          display_order: workouts.length // Add to end of list
+        });
         workout = { ...workout, id: newWorkout.id };
       } else {
         // Update existing workout name
@@ -1170,6 +1246,24 @@ export default function App() {
     setEditingWorkout(null);
   };
 
+  const handleReorderWorkouts = async (newWorkouts) => {
+    // Update local state immediately for smooth UI
+    setWorkouts(newWorkouts);
+
+    try {
+      // Update display_order for each workout
+      await Promise.all(
+        newWorkouts.map((workout, index) =>
+          supabaseApi('workouts', 'PATCH', { display_order: index }, `?id=eq.${workout.id}`)
+        )
+      );
+    } catch (err) {
+      console.error('Failed to save workout order:', err);
+      // Reload workouts to revert to saved state
+      loadWorkouts();
+    }
+  };
+
   // Touch handlers
   const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
   const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
@@ -1206,6 +1300,7 @@ export default function App() {
         onDeleteWorkout={deleteWorkout}
         onCreateNew={handleCreateNew}
         onEditWorkout={handleEditWorkout}
+        onReorderWorkouts={handleReorderWorkouts}
         loading={loading}
         error={error}
         showImport={showImport}
