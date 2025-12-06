@@ -616,9 +616,26 @@ export default function App() {
   const handleImport = async (name, exerciseList) => {
     setSaving(true);
     try {
+      console.log('Creating workout:', name);
       const [workout] = await supabaseApi('workouts', 'POST', { name });
-      const exercisesToInsert = exerciseList.map(ex => ({ ...ex, workout_id: workout.id }));
-      const savedExercises = await supabaseApi('exercises', 'POST', exercisesToInsert);
+      console.log('Workout created:', workout.id);
+
+      const savedExercises = [];
+      console.log('Inserting', exerciseList.length, 'exercises');
+
+      // Insert exercises one by one to avoid batch operation issues
+      for (const exercise of exerciseList) {
+        try {
+          const exerciseToInsert = { ...exercise, workout_id: workout.id };
+          console.log('Inserting exercise:', exerciseToInsert.name);
+          const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
+          savedExercises.push(savedExercise);
+        } catch (err) {
+          console.error('Failed to insert exercise:', exercise.name, err);
+        }
+      }
+
+      console.log('Successfully inserted', savedExercises.length, 'exercises');
 
       const workoutWithCount = { ...workout, exercise_count: savedExercises.length };
       setWorkouts(prev => [workoutWithCount, ...prev]);
