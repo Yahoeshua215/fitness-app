@@ -681,29 +681,46 @@ export default function App() {
 
   const deleteWorkout = async (workoutId) => {
     try {
-      // First, get all exercise IDs for this workout
-      const exercisesData = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workoutId}&select=id`);
-      const exerciseIds = (exercisesData || []).map(ex => ex.id);
+      console.log('Starting deletion for workout ID:', workoutId);
 
-      // Delete all progress for these exercises
-      if (exerciseIds.length > 0) {
-        for (const exerciseId of exerciseIds) {
-          try {
-            await supabaseApi('exercise_progress', 'DELETE', null, `?exercise_id=eq.${exerciseId}`);
-          } catch (err) {
-            console.warn('Failed to delete progress for exercise:', exerciseId, err);
-          }
+      // First, get all exercises for this workout
+      const exercisesData = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workoutId}&select=id`);
+      console.log('Found exercises:', exercisesData?.length || 0);
+      const exerciseIds = (exercisesData || []);
+
+      // Delete progress for each exercise individually
+      for (const exercise of exerciseIds) {
+        try {
+          console.log('Deleting progress for exercise:', exercise.id);
+          await supabaseApi('exercise_progress', 'DELETE', null, `?exercise_id=eq.${exercise.id}`);
+        } catch (err) {
+          console.warn('Failed to delete progress for exercise:', exercise.id, err);
         }
       }
 
-      // Delete all exercises for this workout
-      await supabaseApi('exercises', 'DELETE', null, `?workout_id=eq.${workoutId}`);
+      // Delete exercises one by one to avoid complex queries
+      for (const exercise of exerciseIds) {
+        try {
+          console.log('Deleting exercise:', exercise.id);
+          await supabaseApi('exercises', 'DELETE', null, `?id=eq.${exercise.id}`);
+        } catch (err) {
+          console.warn('Failed to delete exercise:', exercise.id, err);
+        }
+      }
 
-      // Delete the workout itself
+      // Finally delete the workout
+      console.log('Deleting workout:', workoutId);
       await supabaseApi('workouts', 'DELETE', null, `?id=eq.${workoutId}`);
 
+      console.log('Workout deleted successfully, updating UI state');
+
       // Remove from local state
-      setWorkouts(prev => prev.filter(w => w.id !== workoutId));
+      setWorkouts(prev => {
+        console.log('Current workouts before filter:', prev.length);
+        const filtered = prev.filter(w => w.id !== workoutId);
+        console.log('Workouts after filter:', filtered.length);
+        return filtered;
+      });
 
       // If we're currently viewing this workout, go back to dashboard
       if (currentWorkout?.id === workoutId) {
