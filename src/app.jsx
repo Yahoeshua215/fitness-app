@@ -659,18 +659,12 @@ export default function App() {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
 
-          // Create minimal exercise object with only essential fields
+          // Start with absolute minimum required fields only
           const exerciseToInsert = {
             workout_id: workout.id,
             exercise_order: sanitizedExercise.exercise_order || 1,
-            name: sanitizedExercise.name || 'Unnamed Exercise',
-            description: sanitizedExercise.description || '',
-            reps: sanitizedExercise.reps || '',
-            speed: sanitizedExercise.speed || '',
-            rest: sanitizedExercise.rest || '',
-            sets: sanitizedExercise.sets || 1,
-            instructor_notes: sanitizedExercise.instructor_notes || '',
-            video_url: sanitizedExercise.video_url || ''
+            name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100), // Limit field length
+            sets: sanitizedExercise.sets || 1
           };
 
           console.log('Inserting exercise:', exerciseToInsert.name);
