@@ -62,7 +62,8 @@ const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
   const videoUrl = row[7]?.toString().trim() || hyperlinks[`H${rowIndex + 2}`] || hyperlinks[`B${rowIndex + 2}`] || '';
   const fullExercise = row[1] || '';
   const nameParts = fullExercise.split(' - ');
-  
+  const instructorNotes = row[6]?.toString().trim() || '';
+
   return {
     exercise_order: index + 1,
     name: nameParts[0]?.trim() || `Exercise ${index + 1}`,
@@ -71,6 +72,7 @@ const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
     speed: row[3]?.toString() || '',
     rest: row[4]?.toString() || '',
     sets: parseInt(row[5]) || 1,
+    instructor_notes: instructorNotes,
     video_url: videoUrl
   };
 };
@@ -350,7 +352,18 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
             </div>
           )}
 
-          {/* Notes */}
+          {/* Instructor Notes */}
+          {exercise.instructor_notes && (
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center gap-2 text-blue-400 mb-2">
+                <Users className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase">Instructor Notes</span>
+              </div>
+              <p className="text-zinc-300 text-sm">{exercise.instructor_notes}</p>
+            </div>
+          )}
+
+          {/* My Notes */}
           <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-pink-400"><Edit3 className="w-4 h-4" /><span className="text-xs font-semibold uppercase">My Notes</span></div>
