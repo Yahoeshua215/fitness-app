@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff, Home, Calendar, Users, Target, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff, Home, Calendar, Users, Target, ExternalLink, Pause, RotateCcw, Timer } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -173,10 +173,96 @@ const ImportModal = ({ onImport, onClose, saving }) => {
 const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [noteText, setNoteText] = useState(progress?.notes || '');
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [initialTimerSeconds, setInitialTimerSeconds] = useState(0);
+  const timerRef = useRef(null);
 
   const completedSets = progress?.completed_sets || [];
 
   useEffect(() => { setNoteText(progress?.notes || ''); }, [progress?.notes]);
+
+  // Parse rest time to seconds
+  const parseRestTime = (restText) => {
+    if (!restText) return 0;
+    const text = restText.toString().toLowerCase().replace(/[^0-9a-z]/g, '');
+
+    // Match patterns like: 60s, 2min, 90sec, 1m30s, etc.
+    const patterns = [
+      /^(\d+)m(\d+)s?$/, // 1m30s
+      /^(\d+)min(\d+)s?$/, // 1min30s
+      /^(\d+)s(ec)?$/, // 60s, 60sec
+      /^(\d+)m(in)?$/, // 2m, 2min
+      /^(\d+)$/, // plain number (assume seconds)
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        if (pattern === patterns[0] || pattern === patterns[1]) {
+          // minutes + seconds
+          return parseInt(match[1]) * 60 + parseInt(match[2]);
+        } else if (pattern === patterns[3] || pattern === patterns[4]) {
+          // minutes only
+          return parseInt(match[1]) * 60;
+        } else {
+          // seconds only
+          return parseInt(match[1]);
+        }
+      }
+    }
+
+    // Fallback: try to extract any number and assume seconds
+    const numbers = text.match(/\d+/);
+    return numbers ? parseInt(numbers[0]) : 0;
+  };
+
+  // Timer effect
+  useEffect(() => {
+    if (isTimerRunning && timerSeconds > 0) {
+      timerRef.current = setInterval(() => {
+        setTimerSeconds(prev => {
+          if (prev <= 1) {
+            setIsTimerRunning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(timerRef.current);
+    }
+
+    return () => clearInterval(timerRef.current);
+  }, [isTimerRunning, timerSeconds]);
+
+  // Start timer
+  const startRestTimer = () => {
+    if (timerSeconds === 0) {
+      const seconds = parseRestTime(exercise.rest);
+      if (seconds > 0) {
+        setTimerSeconds(seconds);
+        setInitialTimerSeconds(seconds);
+        setIsTimerRunning(true);
+      }
+    } else {
+      setIsTimerRunning(!isTimerRunning);
+    }
+  };
+
+  // Reset timer
+  const resetRestTimer = () => {
+    setIsTimerRunning(false);
+    setTimerSeconds(0);
+    setInitialTimerSeconds(0);
+  };
+
+  // Format time display
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`;
+  };
 
   const openVideoInNewTab = () => {
     if (exercise.video_url) {
@@ -202,10 +288,47 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
             <div className="flex items-center gap-2 text-blue-400 mb-2"><Zap className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Speed</span></div>
             <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
           </div>
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-green-400 mb-2"><Clock className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Rest</span></div>
-            <p className="text-white font-medium text-sm">{exercise.rest || '—'}</p>
-          </div>
+          <button
+            onClick={startRestTimer}
+            className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all hover:border-green-500 ${
+              isTimerRunning ? 'border-green-500 bg-green-900/20' : ''
+            } ${timerSeconds > 0 ? 'cursor-pointer' : 'cursor-pointer'}`}
+          >
+            <div className="flex items-center gap-2 text-green-400 mb-2">
+              {isTimerRunning ? <Timer className="w-4 h-4 animate-pulse" /> : <Clock className="w-4 h-4" />}
+              <span className="text-xs font-semibold uppercase">Rest</span>
+              {timerSeconds > 0 && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); resetRestTimer(); }}
+                  className="ml-auto p-0.5 hover:bg-zinc-700 rounded"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-white font-medium text-sm">
+                {timerSeconds > 0 ? formatTime(timerSeconds) : (exercise.rest || '—')}
+              </p>
+              {timerSeconds > 0 && (
+                <div className="flex items-center gap-1">
+                  {isTimerRunning ? (
+                    <Pause className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <Play className="w-4 h-4 text-green-400" />
+                  )}
+                </div>
+              )}
+            </div>
+            {timerSeconds > 0 && initialTimerSeconds > 0 && (
+              <div className="mt-2 h-1 bg-zinc-700 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000 ease-linear"
+                  style={{ width: `${(timerSeconds / initialTimerSeconds) * 100}%` }}
+                />
+              </div>
+            )}
+          </button>
           <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
             <div className="flex items-center gap-2 text-purple-400 mb-2"><Dumbbell className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Sets</span></div>
             <div className="flex gap-2 flex-wrap">
