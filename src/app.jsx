@@ -277,9 +277,8 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
         <h2 className="text-white font-bold text-xl flex-1 truncate">{exercise.name}</h2>
       </div>
 
-      <div className="flex-1 flex flex-col p-4">
-        {/* Top Content - Grows to fill space */}
-        <div className="flex-1 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4">
           {/* Main Bento Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
@@ -370,36 +369,36 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
               <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
             )}
           </div>
-        </div>
 
-        {/* Bottom Bento Grid - Always at bottom */}
-        <div className="grid grid-cols-2 gap-3 mt-4">
-          <button
-            onClick={openVideoInNewTab}
-            disabled={!exercise.video_url}
-            className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all ${
-              exercise.video_url
-                ? 'hover:border-cyan-500 cursor-pointer group'
-                : 'opacity-50 cursor-not-allowed'
-            }`}
-          >
-            <div className="flex items-center gap-2 text-cyan-400 mb-2">
-              <ExternalLink className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase">Video</span>
+          {/* Bottom Bento Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={openVideoInNewTab}
+              disabled={!exercise.video_url}
+              className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all ${
+                exercise.video_url
+                  ? 'hover:border-cyan-500 cursor-pointer group'
+                  : 'opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex items-center gap-2 text-cyan-400 mb-2">
+                <ExternalLink className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase">Video</span>
+              </div>
+              <p className={`text-white font-medium text-sm ${
+                exercise.video_url
+                  ? 'group-hover:text-cyan-300'
+                  : ''
+              }`}>
+                {exercise.video_url ? 'Watch →' : 'No Video'}
+              </p>
+            </button>
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center gap-2 text-zinc-500 mb-2">
+                <span className="text-xs font-semibold uppercase">Extra</span>
+              </div>
+              <p className="text-zinc-600 text-sm">—</p>
             </div>
-            <p className={`text-white font-medium text-sm ${
-              exercise.video_url
-                ? 'group-hover:text-cyan-300'
-                : ''
-            }`}>
-              {exercise.video_url ? 'Watch →' : 'No Video'}
-            </p>
-          </button>
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-zinc-500 mb-2">
-              <span className="text-xs font-semibold uppercase">Extra</span>
-            </div>
-            <p className="text-zinc-600 text-sm">—</p>
           </div>
         </div>
       </div>
