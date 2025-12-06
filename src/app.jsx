@@ -277,100 +277,103 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
         <h2 className="text-white font-bold text-xl flex-1 truncate">{exercise.name}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Main Bento Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-orange-400 mb-2"><Repeat className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Reps</span></div>
-            <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
-          </div>
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-blue-400 mb-2"><Zap className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Speed</span></div>
-            <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
-          </div>
-          <button
-            onClick={startRestTimer}
-            className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all hover:border-green-500 ${
-              isTimerRunning ? 'border-green-500 bg-green-900/20' : ''
-            } ${timerSeconds > 0 ? 'cursor-pointer' : 'cursor-pointer'}`}
-          >
-            <div className="flex items-center gap-2 text-green-400 mb-2">
-              {isTimerRunning ? <Timer className="w-4 h-4 animate-pulse" /> : <Clock className="w-4 h-4" />}
-              <span className="text-xs font-semibold uppercase">Rest</span>
-              {timerSeconds > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); resetRestTimer(); }}
-                  className="ml-auto p-0.5 hover:bg-zinc-700 rounded"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                </button>
-              )}
+      <div className="flex-1 flex flex-col p-4">
+        {/* Top Content - Grows to fill space */}
+        <div className="flex-1 space-y-4 min-h-0">
+          {/* Main Bento Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center gap-2 text-orange-400 mb-2"><Repeat className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Reps</span></div>
+              <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
             </div>
-            <div className="flex items-center justify-between">
-              <p className="text-white font-medium text-sm">
-                {timerSeconds > 0 ? formatTime(timerSeconds) : (exercise.rest || '—')}
-              </p>
-              {timerSeconds > 0 && (
-                <div className="flex items-center gap-1">
-                  {isTimerRunning ? (
-                    <Pause className="w-4 h-4 text-green-400" />
-                  ) : (
-                    <Play className="w-4 h-4 text-green-400" />
-                  )}
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center gap-2 text-blue-400 mb-2"><Zap className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Speed</span></div>
+              <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
+            </div>
+            <button
+              onClick={startRestTimer}
+              className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all hover:border-green-500 ${
+                isTimerRunning ? 'border-green-500 bg-green-900/20' : ''
+              } ${timerSeconds > 0 ? 'cursor-pointer' : 'cursor-pointer'}`}
+            >
+              <div className="flex items-center gap-2 text-green-400 mb-2">
+                {isTimerRunning ? <Timer className="w-4 h-4 animate-pulse" /> : <Clock className="w-4 h-4" />}
+                <span className="text-xs font-semibold uppercase">Rest</span>
+                {timerSeconds > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); resetRestTimer(); }}
+                    className="ml-auto p-0.5 hover:bg-zinc-700 rounded"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-white font-medium text-sm">
+                  {timerSeconds > 0 ? formatTime(timerSeconds) : (exercise.rest || '—')}
+                </p>
+                {timerSeconds > 0 && (
+                  <div className="flex items-center gap-1">
+                    {isTimerRunning ? (
+                      <Pause className="w-4 h-4 text-green-400" />
+                    ) : (
+                      <Play className="w-4 h-4 text-green-400" />
+                    )}
+                  </div>
+                )}
+              </div>
+              {timerSeconds > 0 && initialTimerSeconds > 0 && (
+                <div className="mt-2 h-1 bg-zinc-700 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000 ease-linear"
+                    style={{ width: `${(timerSeconds / initialTimerSeconds) * 100}%` }}
+                  />
+                </div>
+              )}
+            </button>
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center gap-2 text-purple-400 mb-2"><Dumbbell className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Sets</span></div>
+              <div className="flex gap-2 flex-wrap">
+                {Array.from({ length: exercise.sets }, (_, i) => (
+                  <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
+                    {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          {exercise.description && (
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <p className="text-yellow-400 text-xs font-semibold uppercase mb-2">Instructions</p>
+              <p className="text-zinc-300 text-sm">{exercise.description}</p>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-pink-400"><Edit3 className="w-4 h-4" /><span className="text-xs font-semibold uppercase">My Notes</span></div>
+              {!isEditingNotes ? (
+                <button onClick={() => setIsEditingNotes(true)} className="text-xs text-zinc-400 hover:text-white">Edit</button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={() => { onUpdateNotes(exercise.id, noteText); setIsEditingNotes(false); }} className="p-1 text-green-400"><Save className="w-4 h-4" /></button>
+                  <button onClick={() => { setNoteText(progress?.notes || ''); setIsEditingNotes(false); }} className="p-1 text-red-400"><X className="w-4 h-4" /></button>
                 </div>
               )}
             </div>
-            {timerSeconds > 0 && initialTimerSeconds > 0 && (
-              <div className="mt-2 h-1 bg-zinc-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000 ease-linear"
-                  style={{ width: `${(timerSeconds / initialTimerSeconds) * 100}%` }}
-                />
-              </div>
-            )}
-          </button>
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-purple-400 mb-2"><Dumbbell className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Sets</span></div>
-            <div className="flex gap-2 flex-wrap">
-              {Array.from({ length: exercise.sets }, (_, i) => (
-                <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
-                  {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Description */}
-        {exercise.description && (
-          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <p className="text-yellow-400 text-xs font-semibold uppercase mb-2">Instructions</p>
-            <p className="text-zinc-300 text-sm">{exercise.description}</p>
-          </div>
-        )}
-
-        {/* Notes */}
-        <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-pink-400"><Edit3 className="w-4 h-4" /><span className="text-xs font-semibold uppercase">My Notes</span></div>
-            {!isEditingNotes ? (
-              <button onClick={() => setIsEditingNotes(true)} className="text-xs text-zinc-400 hover:text-white">Edit</button>
+            {isEditingNotes ? (
+              <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add notes..." className="w-full bg-zinc-900 text-white rounded-lg p-3 text-sm border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none" rows={3} />
             ) : (
-              <div className="flex gap-2">
-                <button onClick={() => { onUpdateNotes(exercise.id, noteText); setIsEditingNotes(false); }} className="p-1 text-green-400"><Save className="w-4 h-4" /></button>
-                <button onClick={() => { setNoteText(progress?.notes || ''); setIsEditingNotes(false); }} className="p-1 text-red-400"><X className="w-4 h-4" /></button>
-              </div>
+              <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
             )}
           </div>
-          {isEditingNotes ? (
-            <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add notes..." className="w-full bg-zinc-900 text-white rounded-lg p-3 text-sm border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none" rows={3} />
-          ) : (
-            <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
-          )}
         </div>
 
-        {/* Video - Bottom Grid */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Bottom Bento Grid - Always at bottom */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
           <button
             onClick={openVideoInNewTab}
             disabled={!exercise.video_url}
