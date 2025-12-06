@@ -743,36 +743,7 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
                 key={workout.id}
                 className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 hover:border-orange-500 transition-all duration-200 transform hover:scale-105 relative group"
               >
-                {/* Edit and Delete Buttons */}
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditWorkout(workout);
-                    }}
-                    className="p-2 rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 hover:text-blue-300 transition-all duration-200"
-                    title="Edit Workout"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Are you sure you want to delete "${workout.name}"? This cannot be undone.`)) {
-                        onDeleteWorkout(workout.id);
-                      }
-                    }}
-                    className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 transition-all duration-200"
-                    title="Delete Workout"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div
-                  className="cursor-pointer"
-                  onClick={() => onSelectWorkout(workout)}
-                >
+                <div onClick={() => onSelectWorkout(workout)}>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
                       <Dumbbell className="w-6 h-6 text-orange-400" />
@@ -800,9 +771,40 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
                     </div>
                   </div>
 
-                  <button className="w-full py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold rounded-xl border border-orange-500/50 transition-colors">
-                    Start Workout →
-                  </button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectWorkout(workout);
+                      }}
+                      className="flex-1 py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold rounded-xl border border-orange-500/50 transition-colors"
+                    >
+                      Start Workout →
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditWorkout(workout);
+                      }}
+                      className="p-3 bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 hover:text-blue-300 rounded-xl border border-blue-500/50 transition-colors"
+                      title="Edit Workout"
+                    >
+                      <Edit3 className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Are you sure you want to delete "${workout.name}"? This cannot be undone.`)) {
+                          onDeleteWorkout(workout.id);
+                        }
+                      }}
+                      className="p-3 bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 rounded-xl border border-red-500/50 transition-colors"
+                      title="Delete Workout"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
