@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff, Home, Calendar, Users, Target, ExternalLink } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -173,25 +173,16 @@ const ImportModal = ({ onImport, onClose, saving }) => {
 const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [noteText, setNoteText] = useState(progress?.notes || '');
-  const [showVideo, setShowVideo] = useState(false);
 
   const completedSets = progress?.completed_sets || [];
 
   useEffect(() => { setNoteText(progress?.notes || ''); }, [progress?.notes]);
 
-  const getVideoEmbed = (url) => {
-    if (!url) return null;
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-    if (ytMatch) return { type: 'youtube', id: ytMatch[1], embedUrl: `https://www.youtube.com/embed/${ytMatch[1]}` };
-    const vimeoMatch = url.match(/vimeo\.com\/(\d+)(?:\/([a-zA-Z0-9]+))?/);
-    if (vimeoMatch) {
-      const [, id, hash] = vimeoMatch;
-      return { type: 'vimeo', id, embedUrl: hash ? `https://player.vimeo.com/video/${id}?h=${hash}` : `https://player.vimeo.com/video/${id}` };
+  const openVideoInNewTab = () => {
+    if (exercise.video_url) {
+      window.open(exercise.video_url, '_blank', 'noopener,noreferrer');
     }
-    return null;
   };
-
-  const videoEmbed = getVideoEmbed(exercise.video_url);
 
   return (
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
@@ -201,34 +192,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Video */}
-        <div className="relative aspect-video bg-zinc-800 rounded-xl overflow-hidden border border-zinc-600">
-          {showVideo && videoEmbed ? (
-            <div className="absolute inset-0">
-              <iframe src={videoEmbed.embedUrl} className="w-full h-full" frameBorder="0" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
-              <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">Open ↗</a>
-            </div>
-          ) : videoEmbed ? (
-            <div className="absolute inset-0">
-              {videoEmbed.type === 'youtube' && <img src={`https://img.youtube.com/vi/${videoEmbed.id}/hqdefault.jpg`} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-                <button onClick={() => setShowVideo(true)} className="w-16 h-16 rounded-full bg-orange-500 hover:bg-orange-600 flex items-center justify-center"><Play className="w-8 h-8 text-white ml-1" fill="white" /></button>
-                <div className="flex gap-2 text-sm">
-                  <span className="text-zinc-400">Tap to play</span>
-                  <span className="text-zinc-600">|</span>
-                  <a href={exercise.video_url} target="_blank" rel="noopener noreferrer" className="text-orange-400 hover:text-orange-300">Open ↗</a>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Link className="w-8 h-8 text-zinc-600 mb-2" />
-              <span className="text-zinc-500 text-sm">No video</span>
-            </div>
-          )}
-        </div>
-
-        {/* Bento Grid */}
+        {/* Main Bento Grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
             <div className="flex items-center gap-2 text-orange-400 mb-2"><Repeat className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Reps</span></div>
@@ -281,7 +245,145 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
             <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
           )}
         </div>
+
+        {/* Video - Bottom Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={openVideoInNewTab}
+            disabled={!exercise.video_url}
+            className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all ${
+              exercise.video_url
+                ? 'hover:border-cyan-500 cursor-pointer group'
+                : 'opacity-50 cursor-not-allowed'
+            }`}
+          >
+            <div className="flex items-center gap-2 text-cyan-400 mb-2">
+              <ExternalLink className="w-4 h-4" />
+              <span className="text-xs font-semibold uppercase">Video</span>
+            </div>
+            <p className={`text-white font-medium text-sm ${
+              exercise.video_url
+                ? 'group-hover:text-cyan-300'
+                : ''
+            }`}>
+              {exercise.video_url ? 'Watch →' : 'No Video'}
+            </p>
+          </button>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-zinc-500 mb-2">
+              <span className="text-xs font-semibold uppercase">Extra</span>
+            </div>
+            <p className="text-zinc-600 text-sm">—</p>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+};
+
+// Dashboard Component
+const Dashboard = ({ workouts, onSelectWorkout, onImport, loading, error, showImport, setShowImport, saving }) => {
+  if (loading) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-orange-500 text-white rounded-lg">Retry</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen w-full bg-zinc-950 flex flex-col">
+      {/* Header */}
+      <div className="p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
+              <Dumbbell className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-white font-bold text-2xl">Fitness Dashboard</h1>
+          </div>
+          <button
+            onClick={() => setShowImport(true)}
+            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2"
+          >
+            <Upload className="w-5 h-5" /> Import Workout
+          </button>
+        </div>
+        <p className="text-zinc-400">Select a workout plan to start training</p>
+      </div>
+
+      {/* Workouts Grid */}
+      <div className="flex-1 px-6 pb-6">
+        {workouts.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <div className="text-center">
+              <FileSpreadsheet className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+              <h2 className="text-white text-xl font-bold mb-2">No Workouts Yet</h2>
+              <p className="text-zinc-400 mb-6">Import your first workout plan to get started</p>
+              <button
+                onClick={() => setShowImport(true)}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto"
+              >
+                <Upload className="w-5 h-5" /> Import Workout
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-6xl mx-auto">
+            {workouts.map((workout) => (
+              <div
+                key={workout.id}
+                onClick={() => onSelectWorkout(workout)}
+                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 cursor-pointer hover:border-orange-500 transition-all duration-200 transform hover:scale-105"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                    <Dumbbell className="w-6 h-6 text-orange-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold text-lg truncate">{workout.name}</h3>
+                    <p className="text-zinc-400 text-sm">Workout Plan</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+                    <div className="flex items-center gap-2 text-blue-400 mb-1">
+                      <Target className="w-4 h-4" />
+                      <span className="text-xs font-semibold">Exercises</span>
+                    </div>
+                    <p className="text-white font-bold">{workout.exercise_count || '—'}</p>
+                  </div>
+                  <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+                    <div className="flex items-center gap-2 text-green-400 mb-1">
+                      <Calendar className="w-4 h-4" />
+                      <span className="text-xs font-semibold">Created</span>
+                    </div>
+                    <p className="text-white text-sm">{new Date(workout.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <button className="w-full py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold rounded-xl border border-orange-500/50 transition-colors">
+                  Start Workout →
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {showImport && <ImportModal onImport={onImport} onClose={() => setShowImport(false)} saving={saving} />}
     </div>
   );
 };
@@ -300,6 +402,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'workout'
 
   useEffect(() => { loadWorkouts(); }, []);
 
@@ -308,8 +411,16 @@ export default function App() {
     setError(null);
     try {
       const data = await supabaseApi('workouts', 'GET', null, '?select=*&order=created_at.desc');
-      setWorkouts(data || []);
-      if (data?.length > 0) await loadWorkout(data[0]);
+
+      // Get exercise counts for each workout
+      const workoutsWithCounts = await Promise.all(
+        (data || []).map(async (workout) => {
+          const exercises = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workout.id}&select=id`);
+          return { ...workout, exercise_count: exercises?.length || 0 };
+        })
+      );
+
+      setWorkouts(workoutsWithCounts);
     } catch (err) {
       setError(err.message);
     }
@@ -333,19 +444,26 @@ export default function App() {
     }
   };
 
+  const handleSelectWorkout = async (workout) => {
+    await loadWorkout(workout);
+    setCurrentView('workout');
+  };
+
   const handleImport = async (name, exerciseList) => {
     setSaving(true);
     try {
       const [workout] = await supabaseApi('workouts', 'POST', { name });
       const exercisesToInsert = exerciseList.map(ex => ({ ...ex, workout_id: workout.id }));
       const savedExercises = await supabaseApi('exercises', 'POST', exercisesToInsert);
-      
-      setWorkouts(prev => [workout, ...prev]);
+
+      const workoutWithCount = { ...workout, exercise_count: savedExercises.length };
+      setWorkouts(prev => [workoutWithCount, ...prev]);
       setCurrentWorkout(workout);
       setExercises(savedExercises);
       setProgress({});
       setCurrentIndex(0);
       setShowImport(false);
+      setCurrentView('workout');
     } catch (err) {
       console.error('Import error:', err);
       alert('Failed to import: ' + err.message);
@@ -411,6 +529,23 @@ export default function App() {
   const completedSets = exercises.reduce((sum, ex) => sum + (progress[ex.id]?.completed_sets?.length || 0), 0);
   const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
+  // Show dashboard when no current view or explicitly on dashboard
+  if (currentView === 'dashboard') {
+    return (
+      <Dashboard
+        workouts={workouts}
+        onSelectWorkout={handleSelectWorkout}
+        onImport={handleImport}
+        loading={loading}
+        error={error}
+        showImport={showImport}
+        setShowImport={setShowImport}
+        saving={saving}
+      />
+    );
+  }
+
+  // Loading state for workout view
   if (loading) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
@@ -419,29 +554,30 @@ export default function App() {
     );
   }
 
+  // Error state for workout view
   if (error) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-4">
         <div className="text-center">
           <p className="text-red-400 mb-4">{error}</p>
-          <button onClick={loadWorkouts} className="px-4 py-2 bg-orange-500 text-white rounded-lg">Retry</button>
+          <button onClick={() => setCurrentView('dashboard')} className="px-4 py-2 bg-orange-500 text-white rounded-lg">Back to Dashboard</button>
         </div>
       </div>
     );
   }
 
+  // No exercises in current workout
   if (exercises.length === 0) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center p-4">
         <div className="text-center">
           <Dumbbell className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-          <h1 className="text-white text-xl font-bold mb-2">No Workouts Yet</h1>
-          <p className="text-zinc-400 mb-6">Import your first workout</p>
-          <button onClick={() => setShowImport(true)} className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto">
-            <Upload className="w-5 h-5" /> Import Workout
+          <h1 className="text-white text-xl font-bold mb-2">Empty Workout</h1>
+          <p className="text-zinc-400 mb-6">This workout has no exercises</p>
+          <button onClick={() => setCurrentView('dashboard')} className="px-6 py-3 bg-zinc-500 hover:bg-zinc-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto">
+            <Home className="w-5 h-5" /> Back to Dashboard
           </button>
         </div>
-        {showImport && <ImportModal onImport={handleImport} onClose={() => setShowImport(false)} saving={saving} />}
       </div>
     );
   }
@@ -451,14 +587,21 @@ export default function App() {
       {/* Header */}
       <div className="p-4 pb-2">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <h1 className="text-white font-bold text-lg truncate">{currentWorkout?.name || 'Workout'}</h1>
-            {synced ? <Cloud className="w-4 h-4 text-green-500" /> : <CloudOff className="w-4 h-4 text-yellow-500" />}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <h1 className="text-white font-bold text-lg truncate">{currentWorkout?.name || 'Workout'}</h1>
+              {synced ? <Cloud className="w-4 h-4 text-green-500" /> : <CloudOff className="w-4 h-4 text-yellow-500" />}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-zinc-400 text-sm">{completedSets}/{totalSets}</span>
             <button onClick={resetProgress} className="p-2 text-zinc-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
-            <button onClick={() => setShowImport(true)} className="p-2 text-zinc-400 hover:text-orange-400"><Upload className="w-5 h-5" /></button>
           </div>
         </div>
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
