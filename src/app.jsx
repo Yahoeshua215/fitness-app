@@ -674,11 +674,10 @@ export default function App() {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
 
-          // Use only the absolute minimal fields that we know work
+          // Test with just the three most basic fields
           const exerciseToInsert = {
             workout_id: workout.id,
-            exercise_order: sanitizedExercise.exercise_order || 1,
-            name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100),
+            name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 50),
             sets: sanitizedExercise.sets || 1
           };
 
