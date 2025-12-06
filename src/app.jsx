@@ -630,6 +630,24 @@ export default function App() {
       .replace(/[^\x00-\x7F]/g, ''); // Remove any other non-ASCII characters
   };
 
+  // Helper to get exercise field from either direct field or JSON data
+  const getExerciseField = (exercise, fieldName) => {
+    // Try direct field first
+    if (exercise[fieldName]) return exercise[fieldName];
+
+    // Try from JSON data field
+    if (exercise.data) {
+      try {
+        const parsed = JSON.parse(exercise.data);
+        return parsed[fieldName] || '';
+      } catch {
+        return '';
+      }
+    }
+
+    return '';
+  };
+
   const sanitizeExercise = (exercise) => {
     return {
       ...exercise,
@@ -659,18 +677,21 @@ export default function App() {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
 
-          // Add back essential fields with length limits to prevent 400 errors
+          // Use minimal fields that work + store full data as JSON
           const exerciseToInsert = {
             workout_id: workout.id,
             exercise_order: sanitizedExercise.exercise_order || 1,
             name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100),
-            description: (sanitizedExercise.description || '').substring(0, 200),
-            reps: (sanitizedExercise.reps || '').substring(0, 100),
-            speed: (sanitizedExercise.speed || '').substring(0, 100),
-            rest: (sanitizedExercise.rest || '').substring(0, 100),
             sets: sanitizedExercise.sets || 1,
-            instructor_notes: (sanitizedExercise.instructor_notes || '').substring(0, 200),
-            video_url: (sanitizedExercise.video_url || '').substring(0, 200)
+            // Store all the rich data in a single JSON field
+            data: JSON.stringify({
+              description: sanitizedExercise.description || '',
+              reps: sanitizedExercise.reps || '',
+              speed: sanitizedExercise.speed || '',
+              rest: sanitizedExercise.rest || '',
+              instructor_notes: sanitizedExercise.instructor_notes || '',
+              video_url: sanitizedExercise.video_url || ''
+            })
           };
 
           console.log('Inserting exercise:', exerciseToInsert.name);
