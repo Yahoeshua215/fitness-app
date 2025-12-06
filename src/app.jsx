@@ -423,8 +423,227 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
   );
 };
 
+// Workout Editor Component
+const WorkoutEditor = ({ workout, onSave, onCancel, saving }) => {
+  const [workoutName, setWorkoutName] = useState(workout?.name || 'New Workout');
+  const [exercises, setExercises] = useState(workout?.exercises || []);
+
+  const addExercise = () => {
+    const newExercise = {
+      id: Date.now(), // temporary ID
+      exercise_order: exercises.length + 1,
+      name: '',
+      description: '',
+      reps: '',
+      speed: '',
+      rest: '',
+      sets: 1,
+      instructor_notes: '',
+      video_url: ''
+    };
+    setExercises([...exercises, newExercise]);
+  };
+
+  const updateExercise = (index, field, value) => {
+    const updated = exercises.map((ex, i) =>
+      i === index ? { ...ex, [field]: value } : ex
+    );
+    setExercises(updated);
+  };
+
+  const removeExercise = (index) => {
+    setExercises(exercises.filter((_, i) => i !== index));
+  };
+
+  const handleSave = () => {
+    if (!workoutName.trim()) {
+      alert('Please enter a workout name');
+      return;
+    }
+    onSave({
+      ...workout,
+      name: workoutName.trim(),
+      exercises: exercises.map((ex, index) => ({
+        ...ex,
+        exercise_order: index + 1
+      }))
+    });
+  };
+
+  return (
+    <div className="h-screen w-full bg-zinc-950 flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-zinc-700 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onCancel}
+            className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <h1 className="text-white font-bold text-lg">
+            {workout ? 'Edit Workout' : 'Create New Workout'}
+          </h1>
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-zinc-600 text-white font-bold rounded-xl flex items-center gap-2"
+        >
+          {saving ? <><Loader2 className="w-5 h-5 animate-spin" /> Saving...</> : <><Save className="w-5 h-5" /> Save</>}
+        </button>
+      </div>
+
+      {/* Workout Name */}
+      <div className="p-4 border-b border-zinc-700">
+        <label className="text-zinc-400 text-sm mb-2 block">Workout Name</label>
+        <input
+          type="text"
+          value={workoutName}
+          onChange={(e) => setWorkoutName(e.target.value)}
+          className="w-full bg-zinc-800 text-white rounded-lg px-4 py-3 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+          placeholder="Enter workout name..."
+        />
+      </div>
+
+      {/* Exercises List */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white font-bold text-lg">Exercises ({exercises.length})</h2>
+            <button
+              onClick={addExercise}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-lg flex items-center gap-2"
+            >
+              <Target className="w-5 h-5" /> Add Exercise
+            </button>
+          </div>
+
+          {exercises.length === 0 ? (
+            <div className="text-center py-12">
+              <Dumbbell className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
+              <p className="text-zinc-400 mb-4">No exercises yet</p>
+              <button
+                onClick={addExercise}
+                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
+              >
+                Add First Exercise
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {exercises.map((exercise, index) => (
+                <div key={exercise.id || index} className="bg-zinc-800 rounded-xl p-6 border border-zinc-700">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold text-sm">
+                        {index + 1}
+                      </div>
+                      <h3 className="text-white font-medium">Exercise {index + 1}</h3>
+                    </div>
+                    <button
+                      onClick={() => removeExercise(index)}
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-full transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Exercise Name</label>
+                      <input
+                        type="text"
+                        value={exercise.name}
+                        onChange={(e) => updateExercise(index, 'name', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        placeholder="Exercise name..."
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Reps</label>
+                      <input
+                        type="text"
+                        value={exercise.reps}
+                        onChange={(e) => updateExercise(index, 'reps', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        placeholder="e.g., 10-12"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Speed</label>
+                      <input
+                        type="text"
+                        value={exercise.speed}
+                        onChange={(e) => updateExercise(index, 'speed', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        placeholder="e.g., Slow and controlled"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Rest</label>
+                      <input
+                        type="text"
+                        value={exercise.rest}
+                        onChange={(e) => updateExercise(index, 'rest', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        placeholder="e.g., 60 seconds"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Sets</label>
+                      <input
+                        type="number"
+                        value={exercise.sets}
+                        onChange={(e) => updateExercise(index, 'sets', parseInt(e.target.value) || 1)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        min="1"
+                        max="10"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-zinc-400 text-sm mb-1 block">Video URL</label>
+                      <input
+                        type="url"
+                        value={exercise.video_url}
+                        onChange={(e) => updateExercise(index, 'video_url', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-zinc-400 text-sm mb-1 block">Description</label>
+                      <textarea
+                        value={exercise.description}
+                        onChange={(e) => updateExercise(index, 'description', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none"
+                        rows={2}
+                        placeholder="Exercise description..."
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-zinc-400 text-sm mb-1 block">Instructor Notes</label>
+                      <textarea
+                        value={exercise.instructor_notes}
+                        onChange={(e) => updateExercise(index, 'instructor_notes', e.target.value)}
+                        className="w-full bg-zinc-900 text-white rounded-lg px-3 py-2 border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none"
+                        rows={2}
+                        placeholder="Special instructions or notes..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Dashboard Component
-const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, loading, error, showImport, setShowImport, saving }) => {
+const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCreateNew, onEditWorkout, loading, error, showImport, setShowImport, saving }) => {
   if (loading) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
@@ -458,14 +677,24 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, loadi
               <span className="inline sm:hidden">Dashboard</span>
             </h1>
           </div>
-          <button
-            onClick={() => setShowImport(true)}
-            className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0"
-          >
-            <Upload className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-            <span className="hidden sm:inline">Import Workout</span>
-            <span className="inline sm:hidden">Import</span>
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={onCreateNew}
+              className="px-3 sm:px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0"
+            >
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="hidden sm:inline">Create New</span>
+              <span className="inline sm:hidden">New</span>
+            </button>
+            <button
+              onClick={() => setShowImport(true)}
+              className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0"
+            >
+              <Upload className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="hidden sm:inline">Import Workout</span>
+              <span className="inline sm:hidden">Import</span>
+            </button>
+          </div>
         </div>
         <p className="text-zinc-400 text-sm sm:text-base">
           <span className="hidden sm:inline">Select a workout plan to start training</span>
@@ -480,13 +709,21 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, loadi
             <div className="text-center">
               <FileSpreadsheet className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
               <h2 className="text-white text-xl font-bold mb-2">No Workouts Yet</h2>
-              <p className="text-zinc-400 mb-6">Import your first workout plan to get started</p>
-              <button
-                onClick={() => setShowImport(true)}
-                className="px-4 sm:px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto whitespace-nowrap"
-              >
-                <Upload className="w-5 h-5 flex-shrink-0" /> Import Workout
-              </button>
+              <p className="text-zinc-400 mb-6">Create a new workout or import one to get started</p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={onCreateNew}
+                  className="px-4 sm:px-6 py-3 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Target className="w-5 h-5 flex-shrink-0" /> Create New
+                </button>
+                <button
+                  onClick={() => setShowImport(true)}
+                  className="px-4 sm:px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Upload className="w-5 h-5 flex-shrink-0" /> Import Workout
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -496,19 +733,31 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, loadi
                 key={workout.id}
                 className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 hover:border-orange-500 transition-all duration-200 transform hover:scale-105 relative group"
               >
-                {/* Delete Button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Are you sure you want to delete "${workout.name}"? This cannot be undone.`)) {
-                      onDeleteWorkout(workout.id);
-                    }
-                  }}
-                  className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                  title="Delete Workout"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {/* Edit and Delete Buttons */}
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditWorkout(workout);
+                    }}
+                    className="p-2 rounded-full bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 hover:text-blue-300 transition-all duration-200"
+                    title="Edit Workout"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete "${workout.name}"? This cannot be undone.`)) {
+                        onDeleteWorkout(workout.id);
+                      }
+                    }}
+                    className="p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 transition-all duration-200"
+                    title="Delete Workout"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
 
                 <div
                   className="cursor-pointer"
@@ -570,7 +819,8 @@ export default function App() {
   const [error, setError] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' or 'workout'
+  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'workout', or 'editor'
+  const [editingWorkout, setEditingWorkout] = useState(null);
 
   useEffect(() => { loadWorkouts(); }, []);
 
@@ -816,6 +1066,98 @@ export default function App() {
     }
   };
 
+  const handleCreateNew = () => {
+    setEditingWorkout(null);
+    setCurrentView('editor');
+  };
+
+  const handleEditWorkout = async (workout) => {
+    try {
+      // Load the exercises for this workout
+      const exerciseData = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workout.id}&order=exercise_order`);
+      const workoutWithExercises = {
+        ...workout,
+        exercises: exerciseData || []
+      };
+      setEditingWorkout(workoutWithExercises);
+      setCurrentView('editor');
+    } catch (err) {
+      console.error('Failed to load workout for editing:', err);
+      alert('Failed to load workout for editing');
+    }
+  };
+
+  const handleSaveWorkout = async (workoutData) => {
+    setSaving(true);
+    try {
+      let workout = workoutData;
+
+      // If this is a new workout (no ID), create it first
+      if (!workout.id) {
+        const [newWorkout] = await supabaseApi('workouts', 'POST', { name: workout.name });
+        workout = { ...workout, id: newWorkout.id };
+      } else {
+        // Update existing workout name
+        await supabaseApi('workouts', 'PATCH', { name: workout.name }, `?id=eq.${workout.id}`);
+      }
+
+      // Delete all existing exercises for this workout
+      if (workout.id) {
+        await supabaseApi('exercises', 'DELETE', null, `?workout_id=eq.${workout.id}`);
+      }
+
+      // Insert new exercises
+      const savedExercises = [];
+      for (const exercise of workout.exercises) {
+        if (exercise.name.trim()) { // Only save exercises with names
+          try {
+            const sanitizedExercise = sanitizeExercise(exercise);
+            const exerciseToInsert = {
+              workout_id: workout.id,
+              exercise_order: sanitizedExercise.exercise_order || 1,
+              name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100),
+              description: (sanitizedExercise.description || '').substring(0, 500),
+              reps: (sanitizedExercise.reps || '').substring(0, 100),
+              speed: (sanitizedExercise.speed || '').substring(0, 200),
+              rest: (sanitizedExercise.rest || '').substring(0, 100),
+              sets: sanitizedExercise.sets || 1,
+              instructor_notes: (sanitizedExercise.instructor_notes || '').substring(0, 500),
+              video_url: (sanitizedExercise.video_url || '').substring(0, 500)
+            };
+
+            const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
+            savedExercises.push(savedExercise);
+          } catch (err) {
+            console.error('Failed to save exercise:', exercise.name, err);
+          }
+        }
+      }
+
+      // Update local state
+      const workoutWithCount = { ...workout, exercise_count: savedExercises.length };
+
+      if (!workoutData.id) {
+        // New workout - add to list
+        setWorkouts(prev => [workoutWithCount, ...prev]);
+      } else {
+        // Updated workout - replace in list
+        setWorkouts(prev => prev.map(w => w.id === workout.id ? workoutWithCount : w));
+      }
+
+      setCurrentView('dashboard');
+      setEditingWorkout(null);
+    } catch (err) {
+      console.error('Save workout error:', err);
+      alert('Failed to save workout: ' + err.message);
+    }
+    setSaving(false);
+  };
+
+  const handleCancelEdit = () => {
+    setCurrentView('dashboard');
+    setEditingWorkout(null);
+  };
+
   // Touch handlers
   const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
   const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
@@ -830,6 +1172,18 @@ export default function App() {
   const completedSets = exercises.reduce((sum, ex) => sum + (progress[ex.id]?.completed_sets?.length || 0), 0);
   const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0;
 
+  // Show editor when editing or creating workout
+  if (currentView === 'editor') {
+    return (
+      <WorkoutEditor
+        workout={editingWorkout}
+        onSave={handleSaveWorkout}
+        onCancel={handleCancelEdit}
+        saving={saving}
+      />
+    );
+  }
+
   // Show dashboard when no current view or explicitly on dashboard
   if (currentView === 'dashboard') {
     return (
@@ -838,6 +1192,8 @@ export default function App() {
         onSelectWorkout={handleSelectWorkout}
         onImport={handleImport}
         onDeleteWorkout={deleteWorkout}
+        onCreateNew={handleCreateNew}
+        onEditWorkout={handleEditWorkout}
         loading={loading}
         error={error}
         showImport={showImport}
