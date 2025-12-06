@@ -420,7 +420,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
 };
 
 // Dashboard Component
-const Dashboard = ({ workouts, onSelectWorkout, onImport, loading, error, showImport, setShowImport, saving }) => {
+const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, loading, error, showImport, setShowImport, saving }) => {
   if (loading) {
     return (
       <div className="h-screen w-full bg-zinc-950 flex items-center justify-center">
@@ -490,39 +490,57 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, loading, error, showIm
             {workouts.map((workout) => (
               <div
                 key={workout.id}
-                onClick={() => onSelectWorkout(workout)}
-                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 cursor-pointer hover:border-orange-500 transition-all duration-200 transform hover:scale-105"
+                className="bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl p-6 border border-zinc-700 hover:border-orange-500 transition-all duration-200 transform hover:scale-105 relative group"
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
-                    <Dumbbell className="w-6 h-6 text-orange-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-bold text-lg truncate">{workout.name}</h3>
-                    <p className="text-zinc-400 text-sm">Workout Plan</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
-                    <div className="flex items-center gap-2 text-blue-400 mb-1">
-                      <Target className="w-4 h-4" />
-                      <span className="text-xs font-semibold">Exercises</span>
-                    </div>
-                    <p className="text-white font-bold">{workout.exercise_count || '—'}</p>
-                  </div>
-                  <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
-                    <div className="flex items-center gap-2 text-green-400 mb-1">
-                      <Calendar className="w-4 h-4" />
-                      <span className="text-xs font-semibold">Created</span>
-                    </div>
-                    <p className="text-white text-sm">{new Date(workout.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-
-                <button className="w-full py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold rounded-xl border border-orange-500/50 transition-colors">
-                  Start Workout →
+                {/* Delete Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Are you sure you want to delete "${workout.name}"? This cannot be undone.`)) {
+                      onDeleteWorkout(workout.id);
+                    }
+                  }}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                  title="Delete Workout"
+                >
+                  <Trash2 className="w-4 h-4" />
                 </button>
+
+                <div
+                  className="cursor-pointer"
+                  onClick={() => onSelectWorkout(workout)}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
+                      <Dumbbell className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-bold text-lg truncate">{workout.name}</h3>
+                      <p className="text-zinc-400 text-sm">Workout Plan</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+                      <div className="flex items-center gap-2 text-blue-400 mb-1">
+                        <Target className="w-4 h-4" />
+                        <span className="text-xs font-semibold">Exercises</span>
+                      </div>
+                      <p className="text-white font-bold">{workout.exercise_count || '—'}</p>
+                    </div>
+                    <div className="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+                      <div className="flex items-center gap-2 text-green-400 mb-1">
+                        <Calendar className="w-4 h-4" />
+                        <span className="text-xs font-semibold">Created</span>
+                      </div>
+                      <p className="text-white text-sm">{new Date(workout.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  <button className="w-full py-3 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 font-bold rounded-xl border border-orange-500/50 transition-colors">
+                    Start Workout →
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -661,6 +679,33 @@ export default function App() {
     setProgress({});
   };
 
+  const deleteWorkout = async (workoutId) => {
+    try {
+      // Delete all exercises for this workout
+      await supabaseApi('exercises', 'DELETE', null, `?workout_id=eq.${workoutId}`);
+
+      // Delete all progress for exercises in this workout
+      await supabaseApi('exercise_progress', 'DELETE', null, `?exercise_id=in.(select id from exercises where workout_id=${workoutId})`);
+
+      // Delete the workout itself
+      await supabaseApi('workouts', 'DELETE', null, `?id=eq.${workoutId}`);
+
+      // Remove from local state
+      setWorkouts(prev => prev.filter(w => w.id !== workoutId));
+
+      // If we're currently viewing this workout, go back to dashboard
+      if (currentWorkout?.id === workoutId) {
+        setCurrentWorkout(null);
+        setExercises([]);
+        setProgress({});
+        setCurrentView('dashboard');
+      }
+    } catch (err) {
+      console.error('Delete workout error:', err);
+      alert('Failed to delete workout: ' + err.message);
+    }
+  };
+
   // Touch handlers
   const onTouchStart = (e) => { setTouchEnd(null); setTouchStart(e.targetTouches[0].clientX); };
   const onTouchMove = (e) => { setTouchEnd(e.targetTouches[0].clientX); };
@@ -682,6 +727,7 @@ export default function App() {
         workouts={workouts}
         onSelectWorkout={handleSelectWorkout}
         onImport={handleImport}
+        onDeleteWorkout={deleteWorkout}
         loading={loading}
         error={error}
         showImport={showImport}
