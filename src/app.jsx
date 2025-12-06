@@ -70,6 +70,7 @@ const mapRowToExercise = (row, index, hyperlinks, rowIndex) => {
     speed: row[3]?.toString() || '',
     rest: row[4]?.toString() || '',
     sets: parseInt(row[5]) || 1,
+    instructor_notes: row[6]?.toString().trim() || '',
     video_url: videoUrl
   };
 };
@@ -356,15 +357,15 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
           )}
 
           {/* Instructor Notes */}
-          {exercise.instructor_notes && (
-            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <div className="flex items-center gap-2 text-blue-400 mb-2">
-                <Users className="w-4 h-4" />
-                <span className="text-xs font-semibold uppercase">Instructor Notes</span>
-              </div>
-              <p className="text-zinc-300 text-sm">{exercise.instructor_notes}</p>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center gap-2 text-blue-400 mb-2">
+              <Users className="w-4 h-4" />
+              <span className="text-xs font-semibold uppercase">Instructor Notes</span>
             </div>
-          )}
+            <p className="text-zinc-300 text-sm">
+              {exercise.instructor_notes || "No instructor notes available"}
+            </p>
+          </div>
 
           {/* My Notes */}
           <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
@@ -684,6 +685,7 @@ export default function App() {
             speed: (sanitizedExercise.speed || '').substring(0, 200),
             rest: (sanitizedExercise.rest || '').substring(0, 100),
             sets: sanitizedExercise.sets || 1,
+            instructor_notes: (sanitizedExercise.instructor_notes || '').substring(0, 500),
             video_url: (sanitizedExercise.video_url || '').substring(0, 500)
           };
 
