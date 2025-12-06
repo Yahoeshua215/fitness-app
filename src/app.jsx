@@ -674,21 +674,12 @@ export default function App() {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
 
-          // Use minimal fields that work + store full data as JSON
+          // Use only the absolute minimal fields that we know work
           const exerciseToInsert = {
             workout_id: workout.id,
             exercise_order: sanitizedExercise.exercise_order || 1,
             name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100),
-            sets: sanitizedExercise.sets || 1,
-            // Store all the rich data in a single JSON field
-            data: JSON.stringify({
-              description: sanitizedExercise.description || '',
-              reps: sanitizedExercise.reps || '',
-              speed: sanitizedExercise.speed || '',
-              rest: sanitizedExercise.rest || '',
-              instructor_notes: sanitizedExercise.instructor_notes || '',
-              video_url: sanitizedExercise.video_url || ''
-            })
+            sets: sanitizedExercise.sets || 1
           };
 
           console.log('Inserting exercise:', exerciseToInsert.name);
