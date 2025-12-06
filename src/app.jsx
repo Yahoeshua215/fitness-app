@@ -619,12 +619,36 @@ export default function App() {
     setCurrentView('workout');
   };
 
+  // Sanitize text fields to remove special characters that might cause API errors
+  const sanitizeText = (text) => {
+    if (!text || typeof text !== 'string') return text;
+    return text
+      .replace(/[—–]/g, '-') // Replace em dash and en dash with regular dash
+      .replace(/[""]/g, '"') // Replace curly quotes with straight quotes
+      .replace(/['']/g, "'") // Replace curly apostrophes with straight apostrophe
+      .replace(/[…]/g, '...') // Replace ellipsis character with three dots
+      .replace(/[^\x00-\x7F]/g, ''); // Remove any other non-ASCII characters
+  };
+
+  const sanitizeExercise = (exercise) => {
+    return {
+      ...exercise,
+      name: sanitizeText(exercise.name),
+      description: sanitizeText(exercise.description),
+      reps: sanitizeText(exercise.reps),
+      speed: sanitizeText(exercise.speed),
+      rest: sanitizeText(exercise.rest),
+      instructor_notes: sanitizeText(exercise.instructor_notes),
+      video_url: exercise.video_url // Keep URLs as-is
+    };
+  };
+
   const handleImport = async (name, exerciseList) => {
     console.log('handleImport called with:', { name, exerciseCount: exerciseList?.length });
     setSaving(true);
     try {
-      console.log('Creating workout:', name);
-      const [workout] = await supabaseApi('workouts', 'POST', { name });
+      console.log('Creating workout:', sanitizeText(name));
+      const [workout] = await supabaseApi('workouts', 'POST', { name: sanitizeText(name) });
       console.log('Workout created:', workout.id);
 
       const savedExercises = [];
@@ -633,14 +657,15 @@ export default function App() {
       // Insert exercises one by one to avoid batch operation issues
       for (const exercise of exerciseList) {
         try {
-          const exerciseToInsert = { ...exercise, workout_id: workout.id };
+          const sanitizedExercise = sanitizeExercise(exercise);
+          const exerciseToInsert = { ...sanitizedExercise, workout_id: workout.id };
           console.log('Inserting exercise:', exerciseToInsert.name);
-          console.log('Exercise data being sent:', exerciseToInsert);
+          console.log('Exercise data being sent (sanitized):', exerciseToInsert);
           const [savedExercise] = await supabaseApi('exercises', 'POST', exerciseToInsert);
           savedExercises.push(savedExercise);
         } catch (err) {
           console.error('Failed to insert exercise:', exercise.name, err);
-          console.error('Exercise data that failed:', { ...exercise, workout_id: workout.id });
+          console.error('Exercise data that failed:', { ...sanitizeExercise(exercise), workout_id: workout.id });
         }
       }
 
