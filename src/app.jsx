@@ -1088,10 +1088,29 @@ export default function App() {
     setSynced(false);
 
     try {
-      await supabaseApi('exercise_progress', 'POST', updated, '?on_conflict=exercise_id,session_date');
+      console.log('Saving progress:', updated);
+
+      // Try to update existing record first
+      const existing = await supabaseApi('exercise_progress', 'GET', null,
+        `?exercise_id=eq.${exerciseId}&session_date=eq.${today}&select=id`);
+
+      if (existing && existing.length > 0) {
+        // Update existing record
+        await supabaseApi('exercise_progress', 'PATCH',
+          { completed_sets: completedSets, notes: updated.notes },
+          `?id=eq.${existing[0].id}`);
+      } else {
+        // Create new record
+        await supabaseApi('exercise_progress', 'POST', updated);
+      }
+
       setSynced(true);
+      console.log('Progress saved successfully');
     } catch (err) {
-      console.error('Sync error:', err);
+      console.error('Failed to save progress:', err);
+      console.error('Data that failed:', updated);
+      // Revert local state on error
+      setProgress(prev => ({ ...prev, [exerciseId]: current }));
     }
   };
 
@@ -1103,10 +1122,29 @@ export default function App() {
     setSynced(false);
 
     try {
-      await supabaseApi('exercise_progress', 'POST', updated, '?on_conflict=exercise_id,session_date');
+      console.log('Saving notes:', updated);
+
+      // Try to update existing record first
+      const existing = await supabaseApi('exercise_progress', 'GET', null,
+        `?exercise_id=eq.${exerciseId}&session_date=eq.${today}&select=id`);
+
+      if (existing && existing.length > 0) {
+        // Update existing record
+        await supabaseApi('exercise_progress', 'PATCH',
+          { completed_sets: updated.completed_sets, notes: notes },
+          `?id=eq.${existing[0].id}`);
+      } else {
+        // Create new record
+        await supabaseApi('exercise_progress', 'POST', updated);
+      }
+
       setSynced(true);
+      console.log('Notes saved successfully');
     } catch (err) {
-      console.error('Sync error:', err);
+      console.error('Failed to save notes:', err);
+      console.error('Data that failed:', updated);
+      // Revert local state on error
+      setProgress(prev => ({ ...prev, [exerciseId]: current }));
     }
   };
 
