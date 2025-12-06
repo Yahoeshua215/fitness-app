@@ -674,11 +674,17 @@ export default function App() {
         try {
           const sanitizedExercise = sanitizeExercise(exercise);
 
-          // Test with just the three most basic fields
+          // Add back essential fields one by one
           const exerciseToInsert = {
             workout_id: workout.id,
-            name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 50),
-            sets: sanitizedExercise.sets || 1
+            exercise_order: sanitizedExercise.exercise_order || 1,
+            name: (sanitizedExercise.name || 'Unnamed Exercise').substring(0, 100),
+            description: (sanitizedExercise.description || '').substring(0, 500),
+            reps: (sanitizedExercise.reps || '').substring(0, 100),
+            speed: (sanitizedExercise.speed || '').substring(0, 200),
+            rest: (sanitizedExercise.rest || '').substring(0, 100),
+            sets: sanitizedExercise.sets || 1,
+            video_url: (sanitizedExercise.video_url || '').substring(0, 500)
           };
 
           console.log('Inserting exercise:', exerciseToInsert.name);
