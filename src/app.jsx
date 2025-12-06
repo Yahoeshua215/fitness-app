@@ -428,22 +428,30 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, loading, error, showIm
   return (
     <div className="h-screen w-full bg-zinc-950 flex flex-col">
       {/* Header */}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
-              <Dumbbell className="w-6 h-6 text-white" />
+      <div className="p-4 sm:p-6">
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+              <Dumbbell className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
-            <h1 className="text-white font-bold text-2xl">Fitness Dashboard</h1>
+            <h1 className="text-white font-bold text-lg sm:text-2xl truncate">
+              <span className="hidden sm:inline">Fitness Dashboard</span>
+              <span className="inline sm:hidden">Dashboard</span>
+            </h1>
           </div>
           <button
             onClick={() => setShowImport(true)}
-            className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2"
+            className="px-3 sm:px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap text-sm sm:text-base flex-shrink-0"
           >
-            <Upload className="w-5 h-5" /> Import Workout
+            <Upload className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+            <span className="hidden sm:inline">Import Workout</span>
+            <span className="inline sm:hidden">Import</span>
           </button>
         </div>
-        <p className="text-zinc-400">Select a workout plan to start training</p>
+        <p className="text-zinc-400 text-sm sm:text-base">
+          <span className="hidden sm:inline">Select a workout plan to start training</span>
+          <span className="inline sm:hidden">Select a workout to start</span>
+        </p>
       </div>
 
       {/* Workouts Grid */}
@@ -456,9 +464,9 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, loading, error, showIm
               <p className="text-zinc-400 mb-6">Import your first workout plan to get started</p>
               <button
                 onClick={() => setShowImport(true)}
-                className="px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto"
+                className="px-4 sm:px-6 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl flex items-center gap-2 mx-auto whitespace-nowrap"
               >
-                <Upload className="w-5 h-5" /> Import Workout
+                <Upload className="w-5 h-5 flex-shrink-0" /> Import Workout
               </button>
             </div>
           </div>
