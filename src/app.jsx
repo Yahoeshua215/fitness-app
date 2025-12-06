@@ -15,14 +15,24 @@ const supabaseApi = async (table, method = 'GET', body = null, query = '') => {
     'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
     'Content-Type': 'application/json',
   };
-  if (method === 'POST') headers['Prefer'] = 'return=representation';
+  if (method === 'POST' || method === 'PATCH') headers['Prefer'] = 'return=representation';
   
   const options = { method, headers };
   if (body) options.body = JSON.stringify(body);
   
   const res = await fetch(url, options);
   if (!res.ok) throw new Error(`API Error: ${res.status}`);
-  return method === 'DELETE' ? null : res.json();
+
+  // Handle responses that don't return JSON
+  if (method === 'DELETE') return null;
+
+  const contentType = res.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  return null;
 };
 
 // Spreadsheet Parser
