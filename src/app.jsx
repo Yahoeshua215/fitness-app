@@ -681,11 +681,23 @@ export default function App() {
 
   const deleteWorkout = async (workoutId) => {
     try {
+      // First, get all exercise IDs for this workout
+      const exercisesData = await supabaseApi('exercises', 'GET', null, `?workout_id=eq.${workoutId}&select=id`);
+      const exerciseIds = (exercisesData || []).map(ex => ex.id);
+
+      // Delete all progress for these exercises
+      if (exerciseIds.length > 0) {
+        for (const exerciseId of exerciseIds) {
+          try {
+            await supabaseApi('exercise_progress', 'DELETE', null, `?exercise_id=eq.${exerciseId}`);
+          } catch (err) {
+            console.warn('Failed to delete progress for exercise:', exerciseId, err);
+          }
+        }
+      }
+
       // Delete all exercises for this workout
       await supabaseApi('exercises', 'DELETE', null, `?workout_id=eq.${workoutId}`);
-
-      // Delete all progress for exercises in this workout
-      await supabaseApi('exercise_progress', 'DELETE', null, `?exercise_id=in.(select id from exercises where workout_id=${workoutId})`);
 
       // Delete the workout itself
       await supabaseApi('workouts', 'DELETE', null, `?id=eq.${workoutId}`);
