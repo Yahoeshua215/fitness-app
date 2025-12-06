@@ -805,7 +805,7 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
                 `}
               >
                 {/* Drag Handle */}
-                <div className="absolute top-3 left-1/2 transform -translate-x-1/2 text-zinc-400 hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing">
+                <div className="absolute top-4 left-4 bg-zinc-800 hover:bg-zinc-700 rounded-lg p-2 text-zinc-400 hover:text-zinc-300 transition-all cursor-grab active:cursor-grabbing border border-zinc-700">
                   <div className="flex gap-1">
                     <div className="flex flex-col gap-1">
                       <div className="w-1 h-1 bg-current rounded-full"></div>
@@ -820,7 +820,7 @@ const Dashboard = ({ workouts, onSelectWorkout, onImport, onDeleteWorkout, onCre
                   </div>
                 </div>
 
-                <div onClick={() => onSelectWorkout(workout)} className="pt-6">
+                <div onClick={() => onSelectWorkout(workout)} className="pl-16">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center">
                       <Dumbbell className="w-6 h-6 text-orange-400" />
