@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff, Home, Calendar, Users, Target, ExternalLink, Pause, RotateCcw, Timer } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Play, Check, Edit3, Save, X, Dumbbell, Clock, Repeat, Zap, Upload, FileSpreadsheet, Trash2, Link, Loader2, Cloud, CloudOff, Home, Calendar, Users, Target, ExternalLink, Pause, RotateCcw, Timer, RotateCcw as Reset } from 'lucide-react';
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 
@@ -1481,12 +1481,49 @@ export default function App() {
 
   const resetProgress = async () => {
     const today = new Date().toISOString().split('T')[0];
+
+    // Update local state first for immediate UI feedback
+    const newProgress = {};
+    for (const ex of exercises) {
+      const currentProgress = progress[ex.id];
+      // Reset completed sets but preserve existing notes
+      newProgress[ex.id] = {
+        exercise_id: ex.id,
+        completed_sets: [],
+        notes: currentProgress?.notes || '',
+        session_date: today
+      };
+    }
+    setProgress(newProgress);
+
+    // Update database
     for (const ex of exercises) {
       try {
-        await supabaseApi('exercise_progress', 'POST', { exercise_id: ex.id, completed_sets: [], notes: '', session_date: today }, '?on_conflict=exercise_id,session_date');
-      } catch (err) { console.error(err); }
+        const currentProgress = progress[ex.id];
+        const preservedNotes = currentProgress?.notes || '';
+
+        // Try to update existing record first
+        const existing = await supabaseApi('exercise_progress', 'GET', null,
+          `?exercise_id=eq.${ex.id}&session_date=eq.${today}&select=id`);
+
+        if (existing && existing.length > 0) {
+          // Update existing record, preserving notes
+          await supabaseApi('exercise_progress', 'PATCH',
+            { completed_sets: [], notes: preservedNotes },
+            `?id=eq.${existing[0].id}`);
+        } else {
+          // Create new record with preserved notes
+          await supabaseApi('exercise_progress', 'POST', {
+            exercise_id: ex.id,
+            completed_sets: [],
+            notes: preservedNotes,
+            session_date: today
+          });
+        }
+      } catch (err) {
+        console.error('Failed to reset progress for exercise:', ex.id, err);
+      }
     }
-    setProgress({});
   };
 
   const deleteWorkout = async (workoutId) => {
@@ -1760,7 +1797,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-zinc-400 text-sm">{completedSets}/{totalSets}</span>
-            <button onClick={resetProgress} className="p-2 text-zinc-400 hover:text-white"><Trash2 className="w-4 h-4" /></button>
+            <button onClick={resetProgress} className="p-2 text-zinc-400 hover:text-white" title="Reset workout progress"><RotateCcw className="w-4 h-4" /></button>
           </div>
         </div>
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
