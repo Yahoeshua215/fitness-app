@@ -285,6 +285,51 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
     return numbers ? parseInt(numbers[0]) : 0;
   };
 
+  // Play completion sound
+  const playCompletionSound = () => {
+    try {
+      // Create a simple bell-like tone using Web Audio API
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Create a series of notes for a pleasant bell sound
+      const playNote = (frequency, startTime, duration) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        oscillator.type = 'sine';
+
+        // Create bell-like envelope
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+
+      const now = audioContext.currentTime;
+      // Play a pleasant three-note chime
+      playNote(800, now, 0.5);        // High note
+      playNote(600, now + 0.15, 0.5); // Medium note
+      playNote(400, now + 0.3, 0.8);  // Low note
+
+    } catch (error) {
+      console.log('Audio not supported or blocked:', error);
+      // Fallback to browser notification sound if available
+      try {
+        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBT2V2vnFdSYEKoDK8dqCNwgSYLno7Z9NEQ1NpOPrsGYcBT2U2fLNeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBT2V2vnFdSYEK');
+        audio.volume = 0.3;
+        audio.play().catch(() => {});
+      } catch (e) {
+        // Silent fallback if no audio is supported
+      }
+    }
+  };
+
   // Timer effect
   useEffect(() => {
     if (isTimerRunning && timerSeconds > 0) {
@@ -292,6 +337,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
         setTimerSeconds(prev => {
           if (prev <= 1) {
             setIsTimerRunning(false);
+            playCompletionSound(); // Play sound when timer completes
             return 0;
           }
           return prev - 1;
