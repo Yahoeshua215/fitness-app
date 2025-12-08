@@ -29,7 +29,16 @@ const supabaseApi = async (table, method = 'GET', body = null, query = '') => {
   const contentType = res.headers.get('content-type');
   if (contentType && contentType.includes('application/json')) {
     const text = await res.text();
-    return text ? JSON.parse(text) : null;
+    // Only try to parse if there's actual content
+    if (text && text.trim()) {
+      try {
+        return JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError, 'Response text:', text);
+        return null;
+      }
+    }
+    return null;
   }
 
   return null;
@@ -186,7 +195,7 @@ const ImportModal = ({ onImport, onClose, saving }) => {
 };
 
 // Exercise Card Component
-const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
+const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdateExercise }) => {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [noteText, setNoteText] = useState(progress?.notes || '');
   const [timerSeconds, setTimerSeconds] = useState(0);
@@ -194,9 +203,52 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
   const [initialTimerSeconds, setInitialTimerSeconds] = useState(0);
   const timerRef = useRef(null);
 
+  // Inline editing state
+  const [editingField, setEditingField] = useState(null);
+  const [editValues, setEditValues] = useState({
+    name: exercise.name || '',
+    reps: exercise.reps || '',
+    speed: exercise.speed || '',
+    rest: exercise.rest || '',
+    sets: exercise.sets || 1,
+    description: exercise.description || '',
+    instructor_notes: exercise.instructor_notes || '',
+    video_url: exercise.video_url || ''
+  });
+
+  // Update edit values when exercise changes
+  useEffect(() => {
+    setEditValues({
+      name: exercise.name || '',
+      reps: exercise.reps || '',
+      speed: exercise.speed || '',
+      rest: exercise.rest || '',
+      sets: exercise.sets || 1,
+      description: exercise.description || '',
+      instructor_notes: exercise.instructor_notes || '',
+      video_url: exercise.video_url || ''
+    });
+  }, [exercise]);
+
   const completedSets = progress?.completed_sets || [];
 
   useEffect(() => { setNoteText(progress?.notes || ''); }, [progress?.notes]);
+
+  // Inline editing handlers
+  const handleSaveField = (field) => {
+    const updatedExercise = { ...exercise, [field]: editValues[field] };
+    onUpdateExercise(updatedExercise);
+    setEditingField(null);
+  };
+
+  const handleCancelEdit = (field) => {
+    setEditValues(prev => ({ ...prev, [field]: exercise[field] || '' }));
+    setEditingField(null);
+  };
+
+  const handleFieldChange = (field, value) => {
+    setEditValues(prev => ({ ...prev, [field]: value }));
+  };
 
   // Parse rest time to seconds
   const parseRestTime = (restText) => {
@@ -290,7 +342,38 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
       <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-4 py-3 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">{exercise.exercise_order}</div>
-        <h2 className="text-white font-bold text-xl flex-1 truncate">{exercise.name}</h2>
+        {editingField === 'name' ? (
+          <div className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={editValues.name}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
+              className="flex-1 bg-white/20 text-white font-bold text-xl rounded px-2 py-1 border-none outline-none placeholder-white/60"
+              placeholder="Exercise name..."
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveField('name');
+                if (e.key === 'Escape') handleCancelEdit('name');
+              }}
+            />
+            <button onClick={() => handleSaveField('name')} className="text-white hover:text-green-300">
+              <Save className="w-4 h-4" />
+            </button>
+            <button onClick={() => handleCancelEdit('name')} className="text-white hover:text-red-300">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center gap-2">
+            <h2 className="text-white font-bold text-xl flex-1 truncate">{exercise.name}</h2>
+            <button
+              onClick={() => setEditingField('name')}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <Edit3 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">
@@ -298,45 +381,152 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
           {/* Main Bento Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <div className="flex items-center gap-2 text-orange-400 mb-2"><Repeat className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Reps</span></div>
-              <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
-            </div>
-            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <div className="flex items-center gap-2 text-blue-400 mb-2"><Zap className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Speed</span></div>
-              <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
-            </div>
-            <button
-              onClick={startRestTimer}
-              className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 text-left transition-all hover:border-green-500 ${
-                isTimerRunning ? 'border-green-500 bg-green-900/20' : ''
-              } ${timerSeconds > 0 ? 'cursor-pointer' : 'cursor-pointer'}`}
-            >
-              <div className="flex items-center gap-2 text-green-400 mb-2">
-                {isTimerRunning ? <Timer className="w-4 h-4 animate-pulse" /> : <Clock className="w-4 h-4" />}
-                <span className="text-xs font-semibold uppercase">Rest</span>
-                {timerSeconds > 0 && (
+              <div className="flex items-center justify-between text-orange-400 mb-2">
+                <div className="flex items-center gap-2">
+                  <Repeat className="w-4 h-4" />
+                  <span className="text-xs font-semibold uppercase">Reps</span>
+                </div>
+                {editingField !== 'reps' && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); resetRestTimer(); }}
-                    className="ml-auto p-0.5 hover:bg-zinc-700 rounded"
+                    onClick={() => setEditingField('reps')}
+                    className="text-orange-400/60 hover:text-orange-400 transition-colors"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <Edit3 className="w-3 h-3" />
                   </button>
                 )}
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-white font-medium text-sm">
-                  {timerSeconds > 0 ? formatTime(timerSeconds) : (exercise.rest || '—')}
-                </p>
-                {timerSeconds > 0 && (
-                  <div className="flex items-center gap-1">
-                    {isTimerRunning ? (
-                      <Pause className="w-4 h-4 text-green-400" />
-                    ) : (
-                      <Play className="w-4 h-4 text-green-400" />
-                    )}
-                  </div>
+              {editingField === 'reps' ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editValues.reps}
+                    onChange={(e) => handleFieldChange('reps', e.target.value)}
+                    className="flex-1 bg-zinc-900 text-white font-bold text-lg rounded px-2 py-1 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                    placeholder="Reps..."
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveField('reps');
+                      if (e.key === 'Escape') handleCancelEdit('reps');
+                    }}
+                  />
+                  <button onClick={() => handleSaveField('reps')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('reps')} className="text-red-400 hover:text-red-300">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
+              )}
+            </div>
+            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+              <div className="flex items-center justify-between text-blue-400 mb-2">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  <span className="text-xs font-semibold uppercase">Speed</span>
+                </div>
+                {editingField !== 'speed' && (
+                  <button
+                    onClick={() => setEditingField('speed')}
+                    className="text-blue-400/60 hover:text-blue-400 transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
                 )}
               </div>
+              {editingField === 'speed' ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editValues.speed}
+                    onChange={(e) => handleFieldChange('speed', e.target.value)}
+                    className="flex-1 bg-zinc-900 text-white font-medium text-sm rounded px-2 py-1 border border-zinc-600 focus:border-blue-500 focus:outline-none"
+                    placeholder="Speed..."
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveField('speed');
+                      if (e.key === 'Escape') handleCancelEdit('speed');
+                    }}
+                  />
+                  <button onClick={() => handleSaveField('speed')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('speed')} className="text-red-400 hover:text-red-300">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-white font-medium text-sm">{exercise.speed || '—'}</p>
+              )}
+            </div>
+            <div className={`bg-zinc-800 rounded-xl p-4 border border-zinc-700 transition-all ${
+                isTimerRunning ? 'border-green-500 bg-green-900/20' : 'border-zinc-700'
+              }`}>
+              <div className="flex items-center justify-between text-green-400 mb-2">
+                <div className="flex items-center gap-2">
+                  {isTimerRunning ? <Timer className="w-4 h-4 animate-pulse" /> : <Clock className="w-4 h-4" />}
+                  <span className="text-xs font-semibold uppercase">Rest</span>
+                  {timerSeconds > 0 && (
+                    <button
+                      onClick={resetRestTimer}
+                      className="ml-2 p-0.5 hover:bg-zinc-700 rounded"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+                {editingField !== 'rest' && timerSeconds === 0 && (
+                  <button
+                    onClick={() => setEditingField('rest')}
+                    className="text-green-400/60 hover:text-green-400 transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              {editingField === 'rest' ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editValues.rest}
+                    onChange={(e) => handleFieldChange('rest', e.target.value)}
+                    className="flex-1 bg-zinc-900 text-white font-medium text-sm rounded px-2 py-1 border border-zinc-600 focus:border-green-500 focus:outline-none"
+                    placeholder="Rest time..."
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveField('rest');
+                      if (e.key === 'Escape') handleCancelEdit('rest');
+                    }}
+                  />
+                  <button onClick={() => handleSaveField('rest')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('rest')} className="text-red-400 hover:text-red-300">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={startRestTimer}
+                    className="text-white font-medium text-sm hover:text-green-300 transition-colors cursor-pointer"
+                  >
+                    {timerSeconds > 0 ? formatTime(timerSeconds) : (exercise.rest || '—')}
+                  </button>
+                  {timerSeconds > 0 && (
+                    <div className="flex items-center gap-1">
+                      {isTimerRunning ? (
+                        <Pause className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Play className="w-4 h-4 text-green-400" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {timerSeconds > 0 && initialTimerSeconds > 0 && (
                 <div className="mt-2 h-1 bg-zinc-700 rounded-full overflow-hidden">
                   <div
@@ -345,36 +535,143 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet }) => {
                   />
                 </div>
               )}
-            </button>
+            </div>
             <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <div className="flex items-center gap-2 text-purple-400 mb-2"><Dumbbell className="w-4 h-4" /><span className="text-xs font-semibold uppercase">Sets</span></div>
-              <div className="flex gap-2 flex-wrap">
-                {Array.from({ length: exercise.sets }, (_, i) => (
-                  <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
-                    {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
+              <div className="flex items-center justify-between text-purple-400 mb-2">
+                <div className="flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" />
+                  <span className="text-xs font-semibold uppercase">Sets</span>
+                </div>
+                {editingField !== 'sets' && (
+                  <button
+                    onClick={() => setEditingField('sets')}
+                    className="text-purple-400/60 hover:text-purple-400 transition-colors"
+                  >
+                    <Edit3 className="w-3 h-3" />
                   </button>
-                ))}
+                )}
               </div>
+              {editingField === 'sets' ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editValues.sets}
+                    onChange={(e) => handleFieldChange('sets', parseInt(e.target.value) || 1)}
+                    className="w-20 bg-zinc-900 text-white font-bold rounded px-2 py-1 border border-zinc-600 focus:border-purple-500 focus:outline-none"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveField('sets');
+                      if (e.key === 'Escape') handleCancelEdit('sets');
+                    }}
+                  />
+                  <button onClick={() => handleSaveField('sets')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-3 h-3" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('sets')} className="text-red-400 hover:text-red-300">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2 flex-wrap">
+                  {Array.from({ length: exercise.sets }, (_, i) => (
+                    <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
+                      {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Description */}
-          {exercise.description && (
-            <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-              <p className="text-yellow-400 text-xs font-semibold uppercase mb-2">Instructions</p>
-              <p className="text-zinc-300 text-sm">{exercise.description}</p>
+          <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
+            <div className="flex items-center justify-between text-yellow-400 mb-2">
+              <p className="text-xs font-semibold uppercase">Instructions</p>
+              {editingField !== 'description' && (
+                <button
+                  onClick={() => setEditingField('description')}
+                  className="text-yellow-400/60 hover:text-yellow-400 transition-colors"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              )}
             </div>
-          )}
+            {editingField === 'description' ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editValues.description}
+                  onChange={(e) => handleFieldChange('description', e.target.value)}
+                  className="w-full bg-zinc-900 text-zinc-300 text-sm rounded px-3 py-2 border border-zinc-600 focus:border-yellow-500 focus:outline-none resize-none"
+                  rows={3}
+                  placeholder="Exercise description..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) handleSaveField('description');
+                    if (e.key === 'Escape') handleCancelEdit('description');
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleSaveField('description')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('description')} className="text-red-400 hover:text-red-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="text-zinc-500 text-xs">Ctrl+Enter to save</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-zinc-300 text-sm">{exercise.description || "No description available"}</p>
+            )}
+          </div>
 
           {/* Instructor Notes */}
           <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
-            <div className="flex items-center gap-2 text-blue-400 mb-2">
-              <Users className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase">Instructor Notes</span>
+            <div className="flex items-center justify-between text-blue-400 mb-2">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                <span className="text-xs font-semibold uppercase">Instructor Notes</span>
+              </div>
+              {editingField !== 'instructor_notes' && (
+                <button
+                  onClick={() => setEditingField('instructor_notes')}
+                  className="text-blue-400/60 hover:text-blue-400 transition-colors"
+                >
+                  <Edit3 className="w-3 h-3" />
+                </button>
+              )}
             </div>
-            <p className="text-zinc-300 text-sm">
-              {exercise.instructor_notes || "No instructor notes available"}
-            </p>
+            {editingField === 'instructor_notes' ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editValues.instructor_notes}
+                  onChange={(e) => handleFieldChange('instructor_notes', e.target.value)}
+                  className="w-full bg-zinc-900 text-zinc-300 text-sm rounded px-3 py-2 border border-zinc-600 focus:border-blue-500 focus:outline-none resize-none"
+                  rows={3}
+                  placeholder="Instructor notes..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) handleSaveField('instructor_notes');
+                    if (e.key === 'Escape') handleCancelEdit('instructor_notes');
+                  }}
+                />
+                <div className="flex items-center gap-2">
+                  <button onClick={() => handleSaveField('instructor_notes')} className="text-green-400 hover:text-green-300">
+                    <Save className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleCancelEdit('instructor_notes')} className="text-red-400 hover:text-red-300">
+                    <X className="w-4 h-4" />
+                  </button>
+                  <span className="text-zinc-500 text-xs">Ctrl+Enter to save</span>
+                </div>
+              </div>
+            ) : (
+              <p className="text-zinc-300 text-sm">
+                {exercise.instructor_notes || "No instructor notes available"}
+              </p>
+            )}
           </div>
 
           {/* My Notes */}
@@ -1148,6 +1445,40 @@ export default function App() {
     }
   };
 
+  const updateExercise = async (updatedExercise) => {
+    setSynced(false);
+
+    try {
+      console.log('Updating exercise:', updatedExercise);
+
+      // Update exercise in database
+      const exerciseToUpdate = {
+        name: (updatedExercise.name || 'Unnamed Exercise').substring(0, 100),
+        description: (updatedExercise.description || '').substring(0, 500),
+        reps: (updatedExercise.reps || '').substring(0, 100),
+        speed: (updatedExercise.speed || '').substring(0, 200),
+        rest: (updatedExercise.rest || '').substring(0, 100),
+        sets: updatedExercise.sets || 1,
+        instructor_notes: (updatedExercise.instructor_notes || '').substring(0, 500),
+        video_url: (updatedExercise.video_url || '').substring(0, 500)
+      };
+
+      await supabaseApi('exercises', 'PATCH', exerciseToUpdate, `?id=eq.${updatedExercise.id}`);
+
+      // Update local state
+      setExercises(prev => prev.map(ex =>
+        ex.id === updatedExercise.id ? { ...ex, ...exerciseToUpdate } : ex
+      ));
+
+      setSynced(true);
+      console.log('Exercise updated successfully');
+    } catch (err) {
+      console.error('Failed to update exercise:', err);
+      console.error('Data that failed:', updatedExercise);
+      setSynced(false);
+    }
+  };
+
   const resetProgress = async () => {
     const today = new Date().toISOString().split('T')[0];
     for (const ex of exercises) {
@@ -1442,7 +1773,7 @@ export default function App() {
         <div className="h-full transition-transform duration-300 ease-out flex" style={{ width: `${exercises.length * 100}%`, transform: `translateX(-${currentIndex * (100 / exercises.length)}%)` }}>
           {exercises.map((exercise) => (
             <div key={exercise.id} className="h-full px-1" style={{ width: `${100 / exercises.length}%` }}>
-              <ExerciseCard exercise={exercise} progress={progress[exercise.id]} onUpdateNotes={updateNotes} onToggleSet={toggleSet} />
+              <ExerciseCard exercise={exercise} progress={progress[exercise.id]} onUpdateNotes={updateNotes} onToggleSet={toggleSet} onUpdateExercise={updateExercise} />
             </div>
           ))}
         </div>
