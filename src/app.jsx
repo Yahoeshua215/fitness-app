@@ -1797,7 +1797,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-zinc-400 text-sm">{completedSets}/{totalSets}</span>
-            <button onClick={resetProgress} className="p-2 text-zinc-400 hover:text-white" title="Reset workout progress"><RotateCcw className="w-4 h-4" /></button>
+            <button onClick={resetProgress} className="px-2 py-1 text-zinc-400 hover:text-white text-xs" title="Reset workout progress">Reset</button>
           </div>
         </div>
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
