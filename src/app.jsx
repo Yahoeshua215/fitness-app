@@ -604,15 +604,38 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                     min="1"
                     max="10"
                     value={editValues.sets}
-                    onChange={(e) => handleFieldChange('sets', parseInt(e.target.value) || 1)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string for clearing, otherwise parse to number
+                      if (value === '') {
+                        handleFieldChange('sets', '');
+                      } else {
+                        const numValue = parseInt(value);
+                        if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
+                          handleFieldChange('sets', numValue);
+                        }
+                      }
+                    }}
                     className="w-20 bg-zinc-900 text-white font-medium text-sm rounded px-2 py-1 border border-zinc-600 focus:border-purple-500 focus:outline-none"
                     autoFocus
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveField('sets');
+                      if (e.key === 'Enter') {
+                        // If empty, default to 1 before saving
+                        if (editValues.sets === '') {
+                          handleFieldChange('sets', 1);
+                        }
+                        handleSaveField('sets');
+                      }
                       if (e.key === 'Escape') handleCancelEdit('sets');
                     }}
                   />
-                  <button onClick={() => handleSaveField('sets')} className="text-green-400 hover:text-green-300">
+                  <button onClick={() => {
+                    // If empty, default to 1 before saving
+                    if (editValues.sets === '') {
+                      handleFieldChange('sets', 1);
+                    }
+                    handleSaveField('sets');
+                  }} className="text-green-400 hover:text-green-300">
                     <Save className="w-3 h-3" />
                   </button>
                   <button onClick={() => handleCancelEdit('sets')} className="text-red-400 hover:text-red-300">
