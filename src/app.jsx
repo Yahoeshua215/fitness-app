@@ -447,7 +447,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                     type="text"
                     value={editValues.reps}
                     onChange={(e) => handleFieldChange('reps', e.target.value)}
-                    className="flex-1 bg-zinc-900 text-white font-bold text-lg rounded px-2 py-1 border border-zinc-600 focus:border-orange-500 focus:outline-none"
+                    className="flex-1 bg-zinc-900 text-white font-medium text-sm rounded px-2 py-1 border border-zinc-600 focus:border-orange-500 focus:outline-none"
                     placeholder="Reps..."
                     autoFocus
                     onKeyDown={(e) => {
@@ -463,7 +463,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                   </button>
                 </div>
               ) : (
-                <p className="text-white font-bold text-lg">{exercise.reps || '—'}</p>
+                <p className="text-white font-medium text-sm">{exercise.reps || '—'}</p>
               )}
             </div>
             <div className="bg-zinc-800 rounded-xl p-4 border border-zinc-700">
@@ -605,7 +605,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                     max="10"
                     value={editValues.sets}
                     onChange={(e) => handleFieldChange('sets', parseInt(e.target.value) || 1)}
-                    className="w-20 bg-zinc-900 text-white font-bold rounded px-2 py-1 border border-zinc-600 focus:border-purple-500 focus:outline-none"
+                    className="w-20 bg-zinc-900 text-white font-medium text-sm rounded px-2 py-1 border border-zinc-600 focus:border-purple-500 focus:outline-none"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveField('sets');
@@ -622,7 +622,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
               ) : (
                 <div className="flex gap-2 flex-wrap">
                   {Array.from({ length: exercise.sets }, (_, i) => (
-                    <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-bold transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
+                    <button key={i} onClick={() => onToggleSet(exercise.id, i)} className={`w-9 h-9 rounded-lg flex items-center justify-center font-medium text-sm transition-all ${completedSets.includes(i) ? 'bg-green-500 text-white' : 'bg-zinc-700 text-zinc-400 hover:bg-zinc-600'}`}>
                       {completedSets.includes(i) ? <Check className="w-5 h-5" /> : i + 1}
                     </button>
                   ))}
@@ -649,7 +649,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                 <textarea
                   value={editValues.description}
                   onChange={(e) => handleFieldChange('description', e.target.value)}
-                  className="w-full bg-zinc-900 text-zinc-300 text-sm rounded px-3 py-2 border border-zinc-600 focus:border-yellow-500 focus:outline-none resize-none"
+                  className="w-full bg-zinc-900 text-zinc-300 font-medium text-sm rounded px-3 py-2 border border-zinc-600 focus:border-yellow-500 focus:outline-none resize-none"
                   rows={3}
                   placeholder="Exercise description..."
                   autoFocus
@@ -665,11 +665,11 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                   <button onClick={() => handleCancelEdit('description')} className="text-red-400 hover:text-red-300">
                     <X className="w-4 h-4" />
                   </button>
-                  <span className="text-zinc-500 text-xs">Ctrl+Enter to save</span>
+                  <span className="text-zinc-500 font-medium text-xs">Ctrl+Enter to save</span>
                 </div>
               </div>
             ) : (
-              <p className="text-zinc-300 text-sm">{exercise.description || "No description available"}</p>
+              <p className="text-zinc-300 font-medium text-sm">{exercise.description || "No description available"}</p>
             )}
           </div>
 
@@ -694,7 +694,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                 <textarea
                   value={editValues.instructor_notes}
                   onChange={(e) => handleFieldChange('instructor_notes', e.target.value)}
-                  className="w-full bg-zinc-900 text-zinc-300 text-sm rounded px-3 py-2 border border-zinc-600 focus:border-blue-500 focus:outline-none resize-none"
+                  className="w-full bg-zinc-900 text-zinc-300 font-medium text-sm rounded px-3 py-2 border border-zinc-600 focus:border-blue-500 focus:outline-none resize-none"
                   rows={3}
                   placeholder="Instructor notes..."
                   autoFocus
@@ -710,11 +710,11 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
                   <button onClick={() => handleCancelEdit('instructor_notes')} className="text-red-400 hover:text-red-300">
                     <X className="w-4 h-4" />
                   </button>
-                  <span className="text-zinc-500 text-xs">Ctrl+Enter to save</span>
+                  <span className="text-zinc-500 font-medium text-xs">Ctrl+Enter to save</span>
                 </div>
               </div>
             ) : (
-              <p className="text-zinc-300 text-sm">
+              <p className="text-zinc-300 font-medium text-sm">
                 {exercise.instructor_notes || "No instructor notes available"}
               </p>
             )}
@@ -734,9 +734,9 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
               )}
             </div>
             {isEditingNotes ? (
-              <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add notes..." className="w-full bg-zinc-900 text-white rounded-lg p-3 text-sm border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none" rows={3} />
+              <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="Add notes..." className="w-full bg-zinc-900 text-white font-medium text-sm rounded-lg p-3 border border-zinc-600 focus:border-orange-500 focus:outline-none resize-none" rows={3} />
             ) : (
-              <p className="text-zinc-400 text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
+              <p className="text-zinc-400 font-medium text-sm italic">{progress?.notes || "Tap edit to add notes..."}</p>
             )}
           </div>
 
@@ -767,7 +767,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
               <div className="flex items-center gap-2 text-zinc-500 mb-2">
                 <span className="text-xs font-semibold uppercase">Extra</span>
               </div>
-              <p className="text-zinc-600 text-sm">—</p>
+              <p className="text-zinc-600 font-medium text-sm">—</p>
             </div>
           </div>
         </div>
