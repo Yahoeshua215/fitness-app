@@ -1828,7 +1828,7 @@ export default function App() {
     <div className="h-screen w-full bg-zinc-950 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="p-4 pb-2">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setCurrentView('dashboard')}
@@ -1846,6 +1846,22 @@ export default function App() {
             <button onClick={resetProgress} className="px-2 py-1 text-zinc-400 hover:text-white text-xs" title="Reset workout progress">Reset</button>
           </div>
         </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mb-3">
+          <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700 transition-colors">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <div className="flex gap-2">
+            {exercises.map((_, i) => (
+              <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === currentIndex ? 'bg-orange-500 w-6' : 'bg-zinc-600 hover:bg-zinc-500'}`} />
+            ))}
+          </div>
+          <button onClick={() => setCurrentIndex(Math.min(exercises.length - 1, currentIndex + 1))} disabled={currentIndex === exercises.length - 1} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700 transition-colors">
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+
         <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
           <div className="h-full bg-gradient-to-r from-orange-500 to-orange-400 transition-all duration-300" style={{ width: `${progressPct}%` }} />
         </div>
@@ -1862,16 +1878,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="p-4 pt-2 flex items-center justify-between">
-        <button onClick={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700"><ChevronLeft className="w-6 h-6" /></button>
-        <div className="flex gap-2">
-          {exercises.map((_, i) => (
-            <button key={i} onClick={() => setCurrentIndex(i)} className={`w-2.5 h-2.5 rounded-full transition-all ${i === currentIndex ? 'bg-orange-500 w-6' : 'bg-zinc-600 hover:bg-zinc-500'}`} />
-          ))}
-        </div>
-        <button onClick={() => setCurrentIndex(Math.min(exercises.length - 1, currentIndex + 1))} disabled={currentIndex === exercises.length - 1} className="p-3 rounded-full bg-zinc-800 text-white disabled:opacity-30 hover:bg-zinc-700"><ChevronRight className="w-6 h-6" /></button>
-      </div>
 
       {showImport && <ImportModal onImport={handleImport} onClose={() => setShowImport(false)} saving={saving} />}
     </div>
