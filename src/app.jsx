@@ -386,7 +386,7 @@ const ExerciseCard = ({ exercise, progress, onUpdateNotes, onToggleSet, onUpdate
 
   return (
     <div className="w-full h-full flex flex-col bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700">
-      <div className="bg-gradient-to-r from-orange-600 to-orange-500 px-4 py-3 flex items-center gap-3">
+      <div className="bg-gradient-to-r from-[#636bd9] to-[#bcb9da] px-4 py-3 flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">{exercise.exercise_order}</div>
         {editingField === 'name' ? (
           <div className="flex-1 flex items-center gap-2">
